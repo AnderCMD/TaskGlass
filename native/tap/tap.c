@@ -138,8 +138,11 @@ static void logf_(const wchar_t *fmt, ...) {
 }
 
 /* ------------------------------------------------------------ shared state */
+static BOOL g_state_exists; /* last poll found TaskGlass's shared block */
+
 static LONG read_mode(void) {
     HANDLE m = OpenFileMappingW(FILE_MAP_READ, FALSE, L"Local\\TaskGlass.Xaml.State.v1");
+    g_state_exists = m != NULL;
     if (!m) return 0;
     LONG v = 0;
     LONG *p = (LONG *)MapViewOfFile(m, FILE_MAP_READ, 0, 0, sizeof(LONG));
@@ -212,6 +215,28 @@ static void dispatch_apply(Inst *in) {
     else if (act) IUnknown_Release((IUnknown *)act);
 }
 
+/* Crash recovery: if TaskGlass vanishes without cleaning up, its DWM accent
+ * policy would stay on the taskbar. Clear it here, from inside Explorer. */
+typedef struct { ULONG state, flags, color, anim; } AccentPolicy;
+typedef struct { DWORD attrib; PVOID data; SIZE_T size; } CompAttrData;
+typedef BOOL(WINAPI *SetWcaFn)(HWND, CompAttrData *);
+
+static void clear_accent(HWND bar) {
+    static SetWcaFn fn;
+    if (!fn) fn = (SetWcaFn)GetProcAddress(GetModuleHandleW(L"user32.dll"), "SetWindowCompositionAttribute");
+    if (!fn || !bar) return;
+    AccentPolicy ap = {0, 0, 0, 0}; /* ACCENT_DISABLED */
+    CompAttrData d = {19, &ap, sizeof ap}; /* WCA_ACCENT_POLICY */
+    fn(bar, &d);
+    SendNotifyMessageW(bar, 0x031E /* WM_DWMCOMPOSITIONCHANGED */, 0, 0);
+}
+
+static void clear_all_accents(void) {
+    clear_accent(FindWindowW(L"Shell_TrayWnd", NULL));
+    HWND h = NULL;
+    while ((h = FindWindowExW(NULL, h, L"Shell_SecondaryTrayWnd", NULL)) != NULL) clear_accent(h);
+}
+
 static BOOL any_tracked(void) {
     BOOL any = FALSE;
     EnterCriticalSection(&g_list_cs);
@@ -237,9 +262,17 @@ static void publish_filled(void) {
 
 static DWORD WINAPI poll_thread(LPVOID unused) {
     (void)unused;
+    BOOL was_alive = FALSE;
     for (;;) {
         if (any_tracked()) publish_filled();
         LONG m = read_mode();
+        if (g_state_exists) {
+            was_alive = TRUE;
+        } else if (was_alive) {
+            was_alive = FALSE;
+            logf_(L"TaskGlass is gone: clearing the taskbar accent");
+            clear_all_accents();
+        }
         if (m != g_applied_mode) {
             g_applied_mode = m;
             logf_(L"mode -> %ld", (long)m);
@@ -565,18 +598,28 @@ static DWORD WINAPI install_thread(LPVOID unused) {
         return 1;
     }
 
+    /* Right after Explorer starts, XAML is not ready and every endpoint name
+     * fails with ELEMENT_NOT_FOUND. The endpoint is a small number that does not
+     * grow with our attempts, so every round tries the whole range of names. */
     HRESULT hr = E_FAIL;
-    for (int attempt = 1; attempt <= 60; attempt++) { /* 60 x 500 ms = 30 s */
-        InitCall c = {fn, path, {0}, E_FAIL};
-        _snwprintf(c.conn, 31, L"VisualDiagConnection%d", attempt);
-        HANDLE t = CreateThread(NULL, 0, init_call_thread, &c, 0, NULL);
-        if (!t) { hr = HRESULT_FROM_WIN32(GetLastError()); break; }
-        WaitForSingleObject(t, INFINITE);
-        CloseHandle(t);
-        hr = c.hr;
-        logf_(L"InitializeXamlDiagnosticsEx(%ls) = 0x%08lx", c.conn, (unsigned long)hr);
-        if (SUCCEEDED(hr)) break;
-        Sleep(500);
+    for (int round = 1; round <= 60 && FAILED(hr); round++) { /* 60 x 500 ms = 30 s */
+        for (int n = 1; n <= 8; n++) {
+            InitCall c = {fn, path, {0}, E_FAIL};
+            _snwprintf(c.conn, 31, L"VisualDiagConnection%d", n);
+            HANDLE t = CreateThread(NULL, 0, init_call_thread, &c, 0, NULL);
+            if (!t) { hr = HRESULT_FROM_WIN32(GetLastError()); break; }
+            WaitForSingleObject(t, INFINITE);
+            CloseHandle(t);
+            hr = c.hr;
+            if (SUCCEEDED(hr)) {
+                logf_(L"InitializeXamlDiagnosticsEx(%ls) = 0x%08lx (round %d)", c.conn, (unsigned long)hr, round);
+                break;
+            }
+        }
+        if (FAILED(hr)) {
+            if (round == 1 || round % 20 == 0) logf_(L"XAML not ready yet (0x%08lx), round %d", (unsigned long)hr, round);
+            Sleep(500);
+        }
     }
     if (SUCCEEDED(hr)) {
         HMODULE pin;

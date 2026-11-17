@@ -1,0 +1,34 @@
+#include <winuser.h>
+
+// Resources linked into taskglass.exe. Regenerate resource_windows_amd64.syso
+// with scripts/gen-resources.ps1 after editing this file, the manifest or the icon.
+
+1 ICON "../../assets/taskglass.ico"
+1 RT_MANIFEST "taskglass.manifest"
+
+1 VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEFLAGSMASK 0x3fL
+FILEOS 0x40004L
+FILETYPE 0x1L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", "AnderCMD"
+            VALUE "FileDescription", "TaskGlass - transparent taskbar for Windows"
+            VALUE "FileVersion", "1.0.0.0"
+            VALUE "InternalName", "taskglass"
+            VALUE "LegalCopyright", "Copyright (c) 2026 AnderCMD. MIT License."
+            VALUE "OriginalFilename", "taskglass.exe"
+            VALUE "ProductName", "TaskGlass"
+            VALUE "ProductVersion", "1.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END

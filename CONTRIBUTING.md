@@ -22,6 +22,13 @@ powershell -File scripts/build-tap.ps1     # needs MinGW-w64 (winget install Mar
 go run ./cmd/taskglass --verbose
 ```
 
+Other generated files (outputs are committed, run these only when their inputs change):
+
+```bash
+powershell -File scripts/render-assets.ps1    # logo, banner, social preview, icons (needs Edge)
+powershell -File scripts/gen-resources.ps1    # exe icon, version info, manifest (needs windres)
+```
+
 Rules of thumb:
 
 - Keep Win32 calls inside `internal/winapi`. Put decisions in `internal/state` and `internal/config` so they stay unit-testable.

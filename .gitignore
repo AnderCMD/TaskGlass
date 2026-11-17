@@ -7,3 +7,6 @@ dist/
 graphify-out/cache/
 graphify-out/manifest.json
 graphify-out/20*/
+
+# local tooling with machine-specific paths
+.claude/

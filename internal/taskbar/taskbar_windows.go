@@ -13,8 +13,15 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/winapi"
 )
 
+// policy is what was actually sent to a taskbar: the resolved accent state
+// and colour, so theme changes that alter an "auto" colour are noticed.
+type policy struct {
+	state winapi.AccentState
+	color uint32
+}
+
 type applied struct {
-	ap config.Appearance
+	p  policy
 	at time.Time
 }
 
@@ -30,43 +37,71 @@ func New(log *slog.Logger) *Manager {
 	return &Manager{log: log, seen: map[winapi.HWND]applied{}}
 }
 
-// Tick samples the desktop and updates every taskbar. Call it periodically
-// from a single goroutine. It reports whether any taskbar currently has a
-// non-stock appearance (used to decide whether to hide the XAML fill).
-func (m *Manager) Tick(c config.Config) (styled bool) {
-	bars := winapi.Taskbars()
-	alive := make(map[winapi.HWND]bool, len(bars))
+// Tick samples the desktop and updates every selected taskbar. Call it from a
+// single goroutine. light says whether the Windows theme is light (it picks
+// "auto" colours). It reports whether any taskbar currently has a non-stock
+// appearance, which decides whether the XAML fill must be hidden too.
+func (m *Manager) Tick(c config.Config, light bool) (styled bool) {
+	all := winapi.Taskbars()
+	bars := all
+	if c.Taskbars == config.TaskbarsPrimary && len(bars) > 1 {
+		bars = bars[:1]
+	}
+	selected := make(map[winapi.HWND]bool, len(bars))
+	alive := make(map[winapi.HWND]bool, len(all))
+	for _, h := range all {
+		alive[h] = true
+	}
+
+	needMax, needFg := state.NeedsWindowScan(c)
 	var maxed map[uintptr]bool
-	if c.Maximized.Enabled {
+	if needMax {
 		maxed = winapi.MaximizedMonitors()
 	}
-	start := c.StartMenu.Enabled && winapi.StartMenuActive()
+	var fgExe string
+	var fgMon uintptr
+	if needFg {
+		fgExe, fgMon = winapi.Foreground()
+	}
+	start := c.Enabled && c.StartMenu.Enabled && winapi.StartMenuActive()
 	refresh := time.Duration(c.RefreshMs) * time.Millisecond
 
 	for _, h := range bars {
-		alive[h] = true
-		ctx := state.Context{StartMenu: start, Maximized: maxed[winapi.Monitor(h)]}
+		selected[h] = true
+		mon := winapi.Monitor(h)
+		ctx := state.Context{StartMenu: start, Maximized: maxed[mon]}
+		if needFg && fgMon == mon {
+			ctx.ForegroundExe = fgExe
+		}
 		ap, kind := state.Resolve(c, ctx)
 		if ap.Accent != config.AccentNormal {
 			styled = true
 		}
+		want := toPolicy(ap, light)
 
 		prev, ok := m.seen[h]
-		if ok && prev.ap == ap && time.Since(prev.at) < refresh {
+		if ok && prev.p == want && time.Since(prev.at) < refresh {
 			continue
 		}
-		if err := apply(h, ap); err != nil {
+		if err := winapi.SetAccent(h, want.state, want.color); err != nil {
 			m.log.Warn("apply failed", "hwnd", h, "err", err)
 			continue
 		}
-		if !ok || prev.ap != ap {
+		if !ok || prev.p != want {
 			m.log.Debug("applied", "hwnd", h, "rule", kind, "accent", ap.Accent)
 		}
-		m.seen[h] = applied{ap: ap, at: time.Now()}
+		m.seen[h] = applied{p: want, at: time.Now()}
 	}
+
+	// Forget taskbars that went away (Explorer restart, monitor unplugged) and
+	// give back any that are no longer selected (taskbars switched to "primary").
 	for h := range m.seen {
-		if !alive[h] {
-			delete(m.seen, h) // taskbar went away (Explorer restart, monitor unplugged)
+		switch {
+		case !alive[h]:
+			delete(m.seen, h)
+		case !selected[h]:
+			m.restoreOne(h)
+			delete(m.seen, h)
 		}
 	}
 	return styled
@@ -75,27 +110,27 @@ func (m *Manager) Tick(c config.Config) (styled bool) {
 // Restore puts every taskbar back to the stock Windows look.
 func (m *Manager) Restore() {
 	for _, h := range winapi.Taskbars() {
-		if err := apply(h, config.Appearance{Accent: config.AccentNormal, Color: "#000000"}); err != nil {
-			m.log.Warn("restore failed", "hwnd", h, "err", err)
-		}
-		winapi.Redraw(h)
+		m.restoreOne(h)
 	}
 	m.seen = map[winapi.HWND]applied{}
 }
 
-func apply(h winapi.HWND, ap config.Appearance) error {
-	state, color := toPolicy(ap)
-	return winapi.SetAccent(h, state, color)
+func (m *Manager) restoreOne(h winapi.HWND) {
+	if err := winapi.SetAccent(h, winapi.AccentDisabled, 0); err != nil {
+		m.log.Warn("restore failed", "hwnd", h, "err", err)
+	}
+	winapi.Redraw(h)
 }
 
 // toPolicy converts an Appearance to an accent state and 0xAABBGGRR colour.
-func toPolicy(ap config.Appearance) (winapi.AccentState, uint32) {
-	r, g, b, _ := config.ParseColor(ap.Color)
+func toPolicy(ap config.Appearance, light bool) policy {
+	if ap.Accent == config.AccentNormal {
+		return policy{winapi.AccentDisabled, 0}
+	}
+	r, g, b := ap.RGB(light)
 	alpha := uint32(ap.Opacity) * 255 / 100
 	var st winapi.AccentState
 	switch ap.Accent {
-	case config.AccentNormal:
-		return winapi.AccentDisabled, 0
 	case config.AccentClear:
 		st = winapi.AccentEnableTransparent
 		if alpha == 0 {
@@ -111,5 +146,5 @@ func toPolicy(ap config.Appearance) (winapi.AccentState, uint32) {
 	case config.AccentOpaque:
 		st = winapi.AccentEnableGradient
 	}
-	return st, alpha<<24 | uint32(b)<<16 | uint32(g)<<8 | uint32(r)
+	return policy{st, alpha<<24 | uint32(b)<<16 | uint32(g)<<8 | uint32(r)}
 }

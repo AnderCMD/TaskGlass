@@ -242,6 +242,37 @@ var startHosts = map[string]bool{
 	"searchapp.exe":               true,
 }
 
+// processExe returns the lower-cased executable file name of process pid, or "".
+func processExe(pid uint32) string {
+	if pid == 0 {
+		return ""
+	}
+	proc, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+	if err != nil {
+		return ""
+	}
+	defer windows.CloseHandle(proc)
+	buf := make([]uint16, windows.MAX_PATH)
+	n := uint32(len(buf))
+	if err := windows.QueryFullProcessImageName(proc, 0, &buf[0], &n); err != nil {
+		return ""
+	}
+	return strings.ToLower(filepath.Base(windows.UTF16ToString(buf[:n])))
+}
+
+// Foreground returns the lower-cased executable name of the focused window and
+// the monitor it is on. It returns ("", 0) when there is no usable foreground
+// window or it belongs to the desktop shell.
+func Foreground() (exe string, monitor uintptr) {
+	h, _, _ := procGetForeground.Call()
+	if h == 0 || shellClasses[className(h)] {
+		return "", 0
+	}
+	var pid uint32
+	procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
+	return processExe(pid), Monitor(h)
+}
+
 // StartMenuActive reports whether the Start menu or Search currently has focus.
 func StartMenuActive() bool {
 	h, _, _ := procGetForeground.Call()
@@ -250,18 +281,5 @@ func StartMenuActive() bool {
 	}
 	var pid uint32
 	procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
-	if pid == 0 {
-		return false
-	}
-	proc, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
-	if err != nil {
-		return false
-	}
-	defer windows.CloseHandle(proc)
-	buf := make([]uint16, windows.MAX_PATH)
-	n := uint32(len(buf))
-	if err := windows.QueryFullProcessImageName(proc, 0, &buf[0], &n); err != nil {
-		return false
-	}
-	return startHosts[strings.ToLower(filepath.Base(windows.UTF16ToString(buf[:n])))]
+	return startHosts[processExe(pid)]
 }

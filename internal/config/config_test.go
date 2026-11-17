@@ -25,17 +25,75 @@ func TestParseColor(t *testing.T) {
 	}
 }
 
+func TestAutoColorFollowsTheme(t *testing.T) {
+	a := Appearance{Accent: AccentOpaque, Color: "auto", Opacity: 100}
+	if r, g, b := a.RGB(false); r != 0x1C || g != 0x1C || b != 0x1C {
+		t.Errorf("dark auto = %d %d %d", r, g, b)
+	}
+	if r, g, b := a.RGB(true); r != 0xF3 || g != 0xF3 || b != 0xF3 {
+		t.Errorf("light auto = %d %d %d", r, g, b)
+	}
+	fixed := Appearance{Accent: AccentOpaque, Color: "#102030", Opacity: 100}
+	if r, g, b := fixed.RGB(true); r != 0x10 || g != 0x20 || b != 0x30 {
+		t.Errorf("fixed colour must ignore the theme, got %d %d %d", r, g, b)
+	}
+}
+
+func TestThemeLight(t *testing.T) {
+	cases := []struct {
+		theme  Theme
+		system bool
+		want   bool
+	}{
+		{ThemeAuto, true, true}, {ThemeAuto, false, false},
+		{ThemeLight, false, true}, {ThemeDark, true, false},
+	}
+	for _, c := range cases {
+		if got := c.theme.Light(c.system); got != c.want {
+			t.Errorf("%s.Light(%v) = %v, want %v", c.theme, c.system, got, c.want)
+		}
+	}
+}
+
+func TestParseHotkey(t *testing.T) {
+	good := map[string]struct{ mods, vk uint32 }{
+		"Ctrl+Alt+G":        {ModCtrl | ModAlt, 'G'},
+		"win+shift+f12":     {ModWin | ModShift, 0x7B},
+		" Control + 5 ":     {ModCtrl, '5'},
+		"Ctrl+Alt+Shift+F1": {ModCtrl | ModAlt | ModShift, 0x70},
+	}
+	for s, want := range good {
+		mods, vk, err := ParseHotkey(s)
+		if err != nil || mods != want.mods || vk != want.vk {
+			t.Errorf("ParseHotkey(%q) = %#x %#x %v, want %#x %#x", s, mods, vk, err, want.mods, want.vk)
+		}
+	}
+	for _, bad := range []string{"G", "Ctrl+", "Ctrl+Alt", "Ctrl+F25", "Ctrl+Foo+G", "Ctrl++G", "Ctrl+Enter", "Ctrl+F0"} {
+		if _, _, err := ParseHotkey(bad); err == nil {
+			t.Errorf("ParseHotkey(%q) should fail", bad)
+		}
+	}
+}
+
 func TestParseRejectsBadInput(t *testing.T) {
 	cases := map[string]string{
-		"unknown field":   `{"version":1,"nope":1}`,
-		"bad accent":      `{"version":1,"default":{"accent":"glow","color":"#000000","opacity":0}}`,
-		"bad opacity":     `{"version":1,"default":{"accent":"clear","color":"#000000","opacity":101}}`,
-		"bad version":     `{"version":2}`,
-		"poll too low":    `{"version":1,"poll_ms":1}`,
-		"refresh < poll":  `{"version":1,"poll_ms":500,"refresh_ms":100}`,
-		"bad log level":   `{"version":1,"log_level":"loud"}`,
-		"malformed json":  `{`,
-		"bad nested rule": `{"version":1,"maximized":{"enabled":true,"accent":"clear","color":"nope","opacity":1}}`,
+		"unknown field":    `{"version":1,"nope":1}`,
+		"bad accent":       `{"version":1,"default":{"accent":"glow","color":"#000000","opacity":0}}`,
+		"bad opacity":      `{"version":1,"default":{"accent":"clear","color":"#000000","opacity":101}}`,
+		"bad version":      `{"version":2}`,
+		"poll too low":     `{"version":1,"poll_ms":1}`,
+		"refresh too low":  `{"version":1,"refresh_ms":10}`,
+		"debounce too big": `{"version":1,"debounce_ms":5000}`,
+		"bad log level":    `{"version":1,"log_level":"loud"}`,
+		"malformed json":   `{`,
+		"bad nested rule":  `{"version":1,"maximized":{"enabled":true,"accent":"clear","color":"nope","opacity":1}}`,
+		"bad theme":        `{"version":1,"theme":"sepia"}`,
+		"bad taskbars":     `{"version":1,"taskbars":"some"}`,
+		"bad tray icon":    `{"version":1,"tray_icon":"rainbow"}`,
+		"bad hotkey":       `{"version":1,"hotkey":"G"}`,
+		"app without exe":  `{"version":1,"apps":[{"exe":"","accent":"clear","color":"auto","opacity":0}]}`,
+		"app with path":    `{"version":1,"apps":[{"exe":"C:\\x\\a.exe","accent":"clear","color":"auto","opacity":0}]}`,
+		"app bad accent":   `{"version":1,"apps":[{"exe":"a.exe","accent":"x","color":"auto","opacity":0}]}`,
 	}
 	for name, doc := range cases {
 		if _, err := Parse([]byte(doc)); err == nil {
@@ -44,27 +102,43 @@ func TestParseRejectsBadInput(t *testing.T) {
 	}
 }
 
+func TestTooManyAppRules(t *testing.T) {
+	c := Default()
+	for i := 0; i <= MaxAppRules; i++ {
+		c.Apps = append(c.Apps, AppRule{Exe: "a.exe", Appearance: c.Default})
+	}
+	if err := c.Validate(); err == nil {
+		t.Fatal("expected an error for too many app rules")
+	}
+}
+
+func TestAppRuleMatching(t *testing.T) {
+	r := AppRule{Exe: " Chrome.EXE "}
+	if !r.Matches("chrome.exe") || r.Matches("firefox.exe") {
+		t.Fatal("matching must be case-insensitive and exact")
+	}
+}
+
 func TestParsePartialKeepsDefaults(t *testing.T) {
 	c, err := Parse([]byte(`{"version":1,"poll_ms":200,"refresh_ms":2000}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.PollMs != 200 || c.Default.Accent != AccentClear {
+	if c.PollMs != 200 || c.Default.Accent != AccentClear || !c.Enabled || !c.XamlFix || c.Theme != ThemeAuto {
 		t.Fatalf("unexpected config: %+v", c)
 	}
 }
 
-func TestXamlFixDefaultsOnAndCanBeDisabled(t *testing.T) {
-	if !Default().XamlFix {
-		t.Fatal("xaml_fix should default to true")
-	}
-	c, err := Parse([]byte(`{"version":1}`))
-	if err != nil || !c.XamlFix {
-		t.Fatalf("missing key must keep the default: %+v %v", c, err)
-	}
-	c, err = Parse([]byte(`{"version":1,"xaml_fix":false}`))
-	if err != nil || c.XamlFix {
+func TestExplicitFalseSticks(t *testing.T) {
+	c, err := Parse([]byte(`{"version":1,"enabled":false,"xaml_fix":false}`))
+	if err != nil || c.Enabled || c.XamlFix {
 		t.Fatalf("explicit false must stick: %+v %v", c, err)
+	}
+}
+
+func TestSchemaKeyAccepted(t *testing.T) {
+	if _, err := Parse([]byte(`{"$schema":"` + SchemaURL + `","version":1}`)); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -78,14 +152,15 @@ func TestLoadCreatesDefaultsAndRoundTrips(t *testing.T) {
 		t.Fatalf("config not created: %v", err)
 	}
 	c.Default.Accent = AccentAcrylic
+	c.Apps = []AppRule{{Exe: "code.exe", Appearance: Appearance{Accent: AccentBlur, Color: "#101010", Opacity: 40}}}
+	c.Hotkey = "Ctrl+Alt+G"
 	if err := Save(p, c); err != nil {
 		t.Fatal(err)
 	}
 	got, err := Load(p)
-	if err != nil || got.Default.Accent != AccentAcrylic {
+	if err != nil || got.Default.Accent != AccentAcrylic || len(got.Apps) != 1 || got.Hotkey != "Ctrl+Alt+G" {
 		t.Fatalf("round trip failed: %+v %v", got, err)
 	}
-	// no stray temp files
 	entries, _ := os.ReadDir(filepath.Dir(p))
 	for _, e := range entries {
 		if strings.HasSuffix(e.Name(), ".tmp") {

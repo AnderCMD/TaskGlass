@@ -1,14 +1,19 @@
 //go:build windows
 
-// Package app wires the config, taskbar manager and tray menu together.
+// Package app wires the config, taskbar manager, window events and tray menu
+// together.
 package app
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"fyne.io/systray"
@@ -16,45 +21,76 @@ import (
 	"github.com/AnderCMD/TaskGlass/assets"
 	"github.com/AnderCMD/TaskGlass/internal/autostart"
 	"github.com/AnderCMD/TaskGlass/internal/config"
+	"github.com/AnderCMD/TaskGlass/internal/events"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
+	"github.com/AnderCMD/TaskGlass/internal/theme"
 	"github.com/AnderCMD/TaskGlass/internal/xaml"
 )
 
+// Options configures an App.
+type Options struct {
+	Log     *slog.Logger
+	CfgPath string
+	LogPath string
+	Version string
+	Config  config.Config
+}
+
 // App is the running TaskGlass instance.
 type App struct {
-	log     *slog.Logger
-	cfgPath string
-	exe     string
-	version string
+	Options
+	exe string
 
 	mu      sync.RWMutex
 	cfg     config.Config
 	modTime time.Time
 
-	mgr    *taskbar.Manager
-	xaml   *xaml.Controller // nil when the TAP DLL is unavailable
-	cancel context.CancelFunc
-	done   chan struct{}
+	systemLight atomic.Bool // Windows reports a light theme
+	mgr         *taskbar.Manager
+	xaml        *xaml.Controller // nil when the TAP DLL is unavailable
+	ev          *events.Watcher
+	kick        chan struct{} // asks the loop for an immediate update
+
+	menu     menuItems
+	cancel   context.CancelFunc
+	done     chan struct{}
+	quitReq  atomic.Bool
+	stopOnce sync.Once
+}
+
+type menuItems struct {
+	enabled, maximized, start, xamlFix, autostart *systray.MenuItem
+	accents                                       map[config.Accent]*systray.MenuItem
+	themes                                        map[config.Theme]*systray.MenuItem
 }
 
 // New creates an App with an already-loaded configuration.
-func New(log *slog.Logger, cfgPath, version string, cfg config.Config) *App {
+func New(o Options) *App {
 	exe, _ := os.Executable()
-	a := &App{log: log, cfgPath: cfgPath, exe: exe, version: version, cfg: cfg, mgr: taskbar.New(log)}
-	if st, err := os.Stat(cfgPath); err == nil {
+	a := &App{Options: o, exe: exe, cfg: o.Config, mgr: taskbar.New(o.Log), kick: make(chan struct{}, 1)}
+	if st, err := os.Stat(o.CfgPath); err == nil {
 		a.modTime = st.ModTime()
 	}
+	a.systemLight.Store(theme.SystemIsLight())
 	if p, ok := xaml.Available(exe); ok {
-		a.xaml = xaml.New(log, p)
+		a.xaml = xaml.New(o.Log, p)
 	} else {
-		log.Warn("taskglass_tap.dll not found next to the executable: on Windows 11 the taskbar cannot become fully transparent", "expected", p)
+		o.Log.Warn("taskglass_tap.dll not found next to the executable: on Windows 11 the taskbar cannot become fully transparent", "expected", p)
 	}
 	return a
 }
 
-// Run blocks until the user quits from the tray menu.
+// Run blocks until the user quits (tray menu, --quit or a signal).
 func (a *App) Run() {
 	systray.Run(a.onReady, a.onExit)
+	a.shutdown() // Run can return before onExit has finished; wait for the cleanup
+}
+
+// Quit asks the app to exit. It is safe to call from any goroutine.
+func (a *App) Quit() {
+	if a.quitReq.CompareAndSwap(false, true) {
+		systray.Quit()
+	}
 }
 
 func (a *App) snapshot() config.Config {
@@ -63,24 +99,37 @@ func (a *App) snapshot() config.Config {
 	return a.cfg
 }
 
+func (a *App) wake() {
+	select {
+	case a.kick <- struct{}{}:
+	default:
+	}
+}
+
+// update applies fn to a copy of the config, saves it and publishes it.
 func (a *App) update(fn func(*config.Config)) {
 	a.mu.Lock()
 	next := a.cfg
+	next.Apps = append([]config.AppRule(nil), a.cfg.Apps...)
 	fn(&next)
-	if err := config.Save(a.cfgPath, next); err != nil {
+	if err := config.Save(a.CfgPath, next); err != nil {
 		a.mu.Unlock()
-		a.log.Error("save config", "err", err)
+		a.Log.Error("save config", "err", err)
 		return
 	}
 	a.cfg = next
-	if st, err := os.Stat(a.cfgPath); err == nil {
+	if st, err := os.Stat(a.CfgPath); err == nil {
 		a.modTime = st.ModTime()
 	}
 	a.mu.Unlock()
+	a.applySideEffects(next)
+	a.syncMenu()
+	a.wake()
 }
 
+// reload re-reads the config file if it changed on disk.
 func (a *App) reload() {
-	st, err := os.Stat(a.cfgPath)
+	st, err := os.Stat(a.CfgPath)
 	if err != nil {
 		return
 	}
@@ -90,167 +139,355 @@ func (a *App) reload() {
 	if same {
 		return
 	}
-	c, err := config.Load(a.cfgPath)
+	c, err := config.Load(a.CfgPath)
 	a.mu.Lock()
 	a.modTime = st.ModTime() // remember even on error so we log once per edit
 	if err != nil {
 		a.mu.Unlock()
-		a.log.Error("reload config: keeping previous settings", "err", err)
+		a.Log.Error("reload config: keeping previous settings", "err", err)
 		return
 	}
 	a.cfg = c
 	a.mu.Unlock()
-	a.log.Info("config reloaded")
+	a.Log.Info("config reloaded")
+	a.applySideEffects(c)
+	a.syncMenu()
+	a.wake()
 }
 
+// applySideEffects handles settings that are more than "what to paint".
+func (a *App) applySideEffects(c config.Config) {
+	if a.ev != nil {
+		if c.Hotkey == "" {
+			a.ev.SetHotkey(0, 0)
+		} else if mods, vk, err := config.ParseHotkey(c.Hotkey); err == nil {
+			a.ev.SetHotkey(mods, vk)
+		}
+	}
+	a.updateTrayIcon(c)
+}
+
+func (a *App) isLight(c config.Config) bool { return c.Theme.Light(a.systemLight.Load()) }
+
+func (a *App) updateTrayIcon(c config.Config) {
+	var icon []byte
+	switch c.TrayIcon {
+	case config.TrayColor:
+		icon = assets.Color
+	case config.TrayLight:
+		icon = assets.GlyphLight
+	case config.TrayDark:
+		icon = assets.GlyphDark
+	default: // auto: contrast with the taskbar
+		if a.isLight(c) {
+			icon = assets.GlyphDark
+		} else {
+			icon = assets.GlyphLight
+		}
+	}
+	systray.SetIcon(icon)
+}
+
+// loop is the heart of the app: it updates the taskbars whenever a window
+// event, hotkey, config change or theme change asks for it, and at least every
+// poll_ms as a safety net.
 func (a *App) loop(ctx context.Context) {
 	defer close(a.done)
 	defer a.mgr.Restore()
 	if a.xaml != nil {
 		if err := a.xaml.Start(); err != nil {
-			a.log.Warn("xaml fix disabled", "err", err)
+			a.Log.Warn("xaml fix disabled", "err", err)
 			a.xaml = nil
 		} else {
 			defer a.xaml.Stop() // runs before Restore: show the XAML fill, then reset the accent
 		}
 	}
-	var tick *time.Ticker
-	var interval time.Duration
-	defer func() {
-		if tick != nil {
-			tick.Stop()
-		}
-	}()
-	lastReload := time.Now()
+
+	housekeeping := time.NewTicker(time.Second)
+	defer housekeeping.Stop()
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+	panics := newPanicGuard(5, time.Minute)
+
 	for {
 		c := a.snapshot()
-		if d := time.Duration(c.PollMs) * time.Millisecond; d != interval {
-			if tick != nil {
-				tick.Stop()
+		if !a.safely(panics, func() {
+			styled := a.mgr.Tick(c, a.isLight(c))
+			if a.xaml != nil {
+				a.xaml.SetHide(c.Enabled && c.XamlFix && styled)
 			}
-			interval, tick = d, time.NewTicker(d)
+		}) {
+			a.Log.Error("too many internal errors; restoring the taskbar and exiting")
+			a.Quit()
+			<-ctx.Done()
+			return
 		}
-		styled := a.mgr.Tick(c)
-		if a.xaml != nil {
-			a.xaml.SetHide(c.XamlFix && styled)
+
+		if !timer.Stop() {
+			select {
+			case <-timer.C:
+			default:
+			}
+		}
+		timer.Reset(time.Duration(c.PollMs) * time.Millisecond)
+
+		var changed, hotkey <-chan struct{}
+		if a.ev != nil {
+			changed, hotkey = a.ev.Changed, a.ev.Hotkey
 		}
 		select {
 		case <-ctx.Done():
 			return
-		case <-tick.C:
-		}
-		if time.Since(lastReload) > time.Second {
+		case <-timer.C:
+		case <-a.kick:
+		case <-hotkey:
+			a.update(func(c *config.Config) { c.Enabled = !c.Enabled })
+			a.Log.Info("hotkey toggled", "enabled", a.snapshot().Enabled)
+		case <-changed:
+			// Coalesce a burst of window events into one update.
+			if d := time.Duration(c.DebounceMs) * time.Millisecond; d > 0 {
+				time.Sleep(d)
+			}
+			select {
+			case <-a.ev.Changed:
+			default:
+			}
+		case <-housekeeping.C:
 			a.reload()
-			lastReload = time.Now()
+			if l := theme.SystemIsLight(); l != a.systemLight.Swap(l) {
+				a.Log.Info("windows theme changed", "light", l)
+				a.updateTrayIcon(a.snapshot())
+			}
 		}
 	}
 }
 
+// safely runs fn, converting a panic into a logged error. It reports false
+// when panics are happening too often to keep going.
+func (a *App) safely(g *panicGuard, fn func()) (ok bool) {
+	defer func() {
+		if r := recover(); r != nil {
+			a.Log.Error("panic recovered", "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
+			a.mgr.Restore()
+			ok = g.allow()
+		}
+	}()
+	fn()
+	return true
+}
+
 func (a *App) onReady() {
-	systray.SetIcon(assets.Icon)
 	systray.SetTitle("TaskGlass")
-	systray.SetTooltip("TaskGlass " + a.version)
+	systray.SetTooltip("TaskGlass " + a.Version)
+	a.updateTrayIcon(a.snapshot())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	a.cancel = cancel
 	a.done = make(chan struct{})
-	go a.loop(ctx)
+
+	if ev, err := events.Start(a.Log); err != nil {
+		a.Log.Warn("window events unavailable, falling back to polling", "err", err)
+	} else {
+		a.ev = ev
+		a.applySideEffects(a.snapshot())
+	}
 
 	a.buildMenu(ctx)
-	a.log.Info("started", "version", a.version, "config", a.cfgPath)
+	go a.loop(ctx)
+	a.Log.Info("started", "version", a.Version, "config", a.CfgPath)
+}
+
+func (a *App) onExit() { a.shutdown() }
+
+// shutdown stops the loop, which restores the stock taskbar, and releases the
+// event hooks. It is idempotent and blocks until the work is done: the tray
+// library may return from Run before (or while) it calls onExit, and the
+// process must not exit before the taskbar has been restored.
+func (a *App) shutdown() {
+	a.stopOnce.Do(func() {
+		if a.cancel != nil {
+			a.cancel()
+			select {
+			case <-a.done: // the loop restores the stock taskbar before closing done
+			case <-time.After(10 * time.Second):
+				a.Log.Error("shutdown timed out")
+			}
+		}
+		if a.ev != nil {
+			a.ev.Stop()
+		}
+		a.Log.Info("stopped")
+	})
+}
+
+// ---- tray menu ---------------------------------------------------------
+
+var accentLabels = map[config.Accent]string{
+	config.AccentClear:   "Clear",
+	config.AccentBlur:    "Blur",
+	config.AccentAcrylic: "Acrylic",
+	config.AccentOpaque:  "Opaque",
+	config.AccentNormal:  "Normal (Windows default)",
+}
+
+var themeLabels = map[config.Theme]string{
+	config.ThemeAuto:  "Follow Windows",
+	config.ThemeLight: "Light",
+	config.ThemeDark:  "Dark",
+}
+
+func check(it *systray.MenuItem, on bool) {
+	if on {
+		it.Check()
+	} else {
+		it.Uncheck()
+	}
+}
+
+func (a *App) syncMenu() {
+	m := a.menu
+	if m.enabled == nil {
+		return
+	}
+	c := a.snapshot()
+	check(m.enabled, c.Enabled)
+	check(m.maximized, c.Maximized.Enabled)
+	check(m.start, c.StartMenu.Enabled)
+	check(m.xamlFix, c.XamlFix)
+	for k, it := range m.accents {
+		check(it, k == c.Default.Accent)
+	}
+	for k, it := range m.themes {
+		check(it, k == c.Theme)
+	}
+	title := "Enabled"
+	if c.Hotkey != "" {
+		title += "\t" + c.Hotkey
+	}
+	m.enabled.SetTitle(title)
 }
 
 func (a *App) buildMenu(ctx context.Context) {
-	cur := a.snapshot().Default.Accent
-	title := systray.AddMenuItem("TaskGlass "+a.version, "")
+	c := a.snapshot()
+	title := systray.AddMenuItem("TaskGlass "+a.Version, "")
 	title.Disable()
 	systray.AddSeparator()
 
-	accentItems := map[config.Accent]*systray.MenuItem{}
-	labels := map[config.Accent]string{
-		config.AccentClear:   "Clear",
-		config.AccentBlur:    "Blur",
-		config.AccentAcrylic: "Acrylic",
-		config.AccentOpaque:  "Opaque",
-		config.AccentNormal:  "Normal (Windows default)",
-	}
+	m := &a.menu
+	m.enabled = systray.AddMenuItemCheckbox("Enabled", "Turn the effect on or off", c.Enabled)
+	systray.AddSeparator()
+
+	styleMenu := systray.AddMenuItem("Style", "Taskbar style")
+	m.accents = map[config.Accent]*systray.MenuItem{}
 	for _, ac := range config.Accents {
-		it := systray.AddMenuItemCheckbox(labels[ac], "Default taskbar style", ac == cur)
-		accentItems[ac] = it
-		go func(ac config.Accent, it *systray.MenuItem) {
+		m.accents[ac] = styleMenu.AddSubMenuItemCheckbox(accentLabels[ac], "", ac == c.Default.Accent)
+	}
+	themeMenu := systray.AddMenuItem("Theme", "Drives automatic colours and the tray icon")
+	m.themes = map[config.Theme]*systray.MenuItem{}
+	for _, th := range config.Themes {
+		m.themes[th] = themeMenu.AddSubMenuItemCheckbox(themeLabels[th], "", th == c.Theme)
+	}
+
+	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
+	m.start = systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
+	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
+	if a.xaml == nil {
+		m.xamlFix.Disable()
+	}
+	systray.AddSeparator()
+	m.autostart = systray.AddMenuItemCheckbox("Start with Windows", "", autostart.Enabled(a.exe))
+	openCfg := systray.AddMenuItem("Open config file", "")
+	openLog := systray.AddMenuItem("Open log", "")
+	reload := systray.AddMenuItem("Reload config", "")
+	systray.AddSeparator()
+	quit := systray.AddMenuItem("Quit TaskGlass", "")
+
+	spawn := func(ch <-chan struct{}, fn func()) {
+		go func() {
 			for {
 				select {
 				case <-ctx.Done():
 					return
-				case <-it.ClickedCh:
-					a.update(func(c *config.Config) { c.Default.Accent = ac })
-					for k, other := range accentItems {
-						if k == ac {
-							other.Check()
-						} else {
-							other.Uncheck()
-						}
-					}
+				case <-ch:
+					fn()
 				}
 			}
-		}(ac, it)
+		}()
 	}
-
-	systray.AddSeparator()
-	c := a.snapshot()
-	maxItem := systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
-	startItem := systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
-	autoItem := systray.AddMenuItemCheckbox("Start with Windows", "", autostart.Enabled(a.exe))
-	systray.AddSeparator()
-	openCfg := systray.AddMenuItem("Open config file", "")
-	quit := systray.AddMenuItem("Quit TaskGlass", "")
-
-	toggle := func(it *systray.MenuItem, set func(c *config.Config, on bool)) {
-		on := !it.Checked()
-		a.update(func(c *config.Config) { set(c, on) })
-		if on {
-			it.Check()
-		} else {
-			it.Uncheck()
+	flip := func(it *systray.MenuItem, set func(c *config.Config, on bool)) func() {
+		return func() {
+			on := !it.Checked()
+			a.update(func(c *config.Config) { set(c, on) })
 		}
 	}
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			case <-maxItem.ClickedCh:
-				toggle(maxItem, func(c *config.Config, on bool) { c.Maximized.Enabled = on })
-			case <-startItem.ClickedCh:
-				toggle(startItem, func(c *config.Config, on bool) { c.StartMenu.Enabled = on })
-			case <-autoItem.ClickedCh:
-				on := !autoItem.Checked()
-				if err := autostart.Set(a.exe, on); err != nil {
-					a.log.Error("autostart", "err", err)
-					continue
-				}
-				if on {
-					autoItem.Check()
-				} else {
-					autoItem.Uncheck()
-				}
-			case <-openCfg.ClickedCh:
-				// notepad is always present and never interprets the file.
-				if err := exec.Command("notepad.exe", a.cfgPath).Start(); err != nil {
-					a.log.Error("open config", "err", err)
-				}
-			case <-quit.ClickedCh:
-				systray.Quit()
-				return
+	spawn(m.enabled.ClickedCh, flip(m.enabled, func(c *config.Config, on bool) { c.Enabled = on }))
+	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
+	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
+	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))
+	for ac, it := range m.accents {
+		ac := ac
+		spawn(it.ClickedCh, func() { a.update(func(c *config.Config) { c.Default.Accent = ac }) })
+	}
+	for th, it := range m.themes {
+		th := th
+		spawn(it.ClickedCh, func() { a.update(func(c *config.Config) { c.Theme = th }) })
+	}
+	spawn(m.autostart.ClickedCh, func() {
+		on := !m.autostart.Checked()
+		if err := autostart.Set(a.exe, on); err != nil {
+			a.Log.Error("autostart", "err", err)
+			return
+		}
+		check(m.autostart, on)
+	})
+	// notepad is always present and never interprets the file it opens.
+	open := func(path string) func() {
+		return func() {
+			if err := exec.Command("notepad.exe", path).Start(); err != nil {
+				a.Log.Error("open file", "path", filepath.Base(path), "err", err)
 			}
+		}
+	}
+	spawn(openCfg.ClickedCh, open(a.CfgPath))
+	spawn(openLog.ClickedCh, open(a.LogPath))
+	spawn(reload.ClickedCh, func() {
+		a.mu.Lock()
+		a.modTime = time.Time{} // force a re-read
+		a.mu.Unlock()
+		a.reload()
+	})
+	go func() {
+		select {
+		case <-ctx.Done():
+		case <-quit.ClickedCh:
+			a.Quit()
 		}
 	}()
+	a.syncMenu()
 }
 
-func (a *App) onExit() {
-	if a.cancel != nil {
-		a.cancel()
-		<-a.done // loop restores the stock taskbar before we return
+// ---- panic guard -------------------------------------------------------
+
+// panicGuard allows up to max panics inside a sliding window.
+type panicGuard struct {
+	max    int
+	window time.Duration
+	times  []time.Time
+}
+
+func newPanicGuard(max int, window time.Duration) *panicGuard {
+	return &panicGuard{max: max, window: window}
+}
+
+// allow records a panic and reports whether the app may keep running.
+func (g *panicGuard) allow() bool {
+	now := time.Now()
+	keep := g.times[:0]
+	for _, t := range g.times {
+		if now.Sub(t) < g.window {
+			keep = append(keep, t)
+		}
 	}
-	a.log.Info("stopped")
+	g.times = append(keep, now)
+	return len(g.times) <= g.max
 }

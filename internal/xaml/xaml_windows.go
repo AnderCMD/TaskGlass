@@ -256,7 +256,20 @@ func stage(src string) (string, error) {
 // it to report that it attached to XAML.
 func (c *Controller) inject(ctx context.Context, bar winapi.HWND, tid, pid uint32, dllPath string) error {
 	if moduleLoaded(pid, filepath.Base(dllPath)) {
-		return nil // an earlier TaskGlass run already attached this exact DLL
+		// An earlier TaskGlass run attached this exact DLL, or a failed attempt
+		// is still unwinding. Only the TAP can tell: it republishes status 2 to
+		// every new shared block while it controls the fill.
+		for i := 0; i < 12; i++ { // 3 s
+			if atomic.LoadInt32(c.status) == 2 {
+				return nil
+			}
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(250 * time.Millisecond):
+			}
+		}
+		return fmt.Errorf("tap is loaded in Explorer but not controlling the fill yet")
 	}
 	if tid == 0 {
 		return fmt.Errorf("taskbar window has no thread")

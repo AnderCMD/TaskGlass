@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/AnderCMD/TaskGlass/main/docs/config.schema.json",
+  "title": "TaskGlass configuration",
+  "description": "Settings file for TaskGlass, usually %APPDATA%\\TaskGlass\\config.json. Every key is optional: missing keys keep their default.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "accent": {
+      "type": "string",
+      "enum": ["clear", "blur", "acrylic", "opaque", "normal"],
+      "description": "clear: fully transparent. blur: gaussian blur with a tint. acrylic: blur plus noise. opaque: solid colour. normal: leave the stock Windows taskbar."
+    },
+    "color": {
+      "type": "string",
+      "pattern": "^([Aa][Uu][Tt][Oo]|#?[0-9A-Fa-f]{6})$",
+      "description": "#RRGGBB, or \"auto\" to follow the Windows theme (dark: #1C1C1C, light: #F3F3F3)."
+    },
+    "opacity": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Tint opacity in percent."
+    },
+    "appearance": {
+      "type": "object",
+      "properties": {
+        "accent": { "$ref": "#/definitions/accent" },
+        "color": { "$ref": "#/definitions/color" },
+        "opacity": { "$ref": "#/definitions/opacity" }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean", "description": "The rule only applies when true." },
+        "accent": { "$ref": "#/definitions/accent" },
+        "color": { "$ref": "#/definitions/color" },
+        "opacity": { "$ref": "#/definitions/opacity" }
+      }
+    }
+  },
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "const": 1, "description": "Schema version." },
+    "enabled": { "type": "boolean", "default": true, "description": "Master switch. When false the stock taskbar is shown." },
+    "theme": {
+      "type": "string",
+      "enum": ["auto", "light", "dark"],
+      "default": "auto",
+      "description": "Which colour mode drives \"auto\" colours and the tray icon. auto follows Windows."
+    },
+    "taskbars": {
+      "type": "string",
+      "enum": ["all", "primary"],
+      "default": "all",
+      "description": "Style every monitor's taskbar, or only the primary one."
+    },
+    "default": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Appearance used when no other rule matches.",
+      "properties": {
+        "accent": { "$ref": "#/definitions/accent" },
+        "color": { "$ref": "#/definitions/color" },
+        "opacity": { "$ref": "#/definitions/opacity" }
+      }
+    },
+    "maximized": { "$ref": "#/definitions/rule", "description": "Applies on a monitor that has a maximized window." },
+    "start_menu": { "$ref": "#/definitions/rule", "description": "Applies while the Start menu or Search has focus." },
+    "apps": {
+      "type": "array",
+      "maxItems": 64,
+      "description": "Applies while the named application has focus. The first matching rule wins. They take priority over \"maximized\" and are overridden by \"start_menu\".",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["exe"],
+        "properties": {
+          "exe": { "type": "string", "minLength": 1, "pattern": "^[^\\\\/:*?\"<>|]+$", "description": "Executable file name, case-insensitive, e.g. chrome.exe." },
+          "accent": { "$ref": "#/definitions/accent" },
+          "color": { "$ref": "#/definitions/color" },
+          "opacity": { "$ref": "#/definitions/opacity" }
+        }
+      }
+    },
+    "tray_icon": {
+      "type": "string",
+      "enum": ["auto", "color", "light", "dark"],
+      "default": "auto",
+      "description": "Notification-area icon. auto: monochrome glyph that contrasts with the Windows theme."
+    },
+    "hotkey": {
+      "type": "string",
+      "default": "",
+      "description": "Global shortcut that toggles \"enabled\", e.g. \"Ctrl+Alt+G\". Needs at least one of Ctrl, Alt, Shift, Win and a key A-Z, 0-9 or F1-F24. Empty disables it."
+    },
+    "poll_ms": { "type": "integer", "minimum": 50, "maximum": 10000, "default": 500, "description": "Fallback sampling interval. Window events normally trigger updates instantly." },
+    "debounce_ms": { "type": "integer", "minimum": 0, "maximum": 1000, "default": 25, "description": "Coalesces bursts of window events into one update." },
+    "refresh_ms": { "type": "integer", "minimum": 100, "maximum": 60000, "default": 1000, "description": "Re-apply the effect this often even if nothing changed." },
+    "xaml_fix": {
+      "type": "boolean",
+      "default": true,
+      "description": "Remove Windows 11's own XAML taskbar fill for true transparency (needs taskglass_tap.dll). false never touches Explorer."
+    },
+    "log_level": { "type": "string", "enum": ["debug", "info", "warn", "error"], "default": "info" }
+  }
+}

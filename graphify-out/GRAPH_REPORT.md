@@ -1,50 +1,60 @@
 # Graph Report - TaskGlass  (2026-11-17)
 
 ## Corpus Check
-- 30 files · ~12,500 words
+- 36 files · ~51,045 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 245 nodes · 463 edges · 23 communities (20 shown, 3 thin omitted)
-- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 41 edges (avg confidence: 0.8)
+- 458 nodes · 772 edges · 33 communities (29 shown, 4 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 53 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `71608a43`
+- Built from commit: `46a8c45e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - Config
-- TaskGlass
+- README.md
 - winapi_windows.go
-- Resolve
+- multi
 - App
 - Controller
-- HRESULT
-- TaskGlass
 - tap.c
-- Changelog
-- logf_
+- items
+- config.schema.json
+- [1.0.0] - 2026-11-17
+- theme
 - PULL_REQUEST_TEMPLATE.md
-- ULONG
+- main
+- main.go
 - github.com/AnderCMD/TaskGlass
-- BOOL
-- on_change
-- TaskGlassHookProc
+- properties
+- Watcher
+- enum
 - CLAUDE.md
+- taskbars
+- debounce_ms
+- poll_ms
+- refresh_ms
+- hotkey
+- xaml_fix
+- autostart_windows.go
+- start_menu
+- render-assets.ps1
 
 ## God Nodes (most connected - your core abstractions)
-1. `App` - 17 edges
-2. `Controller` - 15 edges
-3. `Config` - 14 edges
-4. `logf_()` - 12 edges
-5. `Default()` - 10 edges
-6. `Context` - 10 edges
-7. `on_change()` - 10 edges
-8. `Appearance` - 9 edges
-9. `Parse()` - 9 edges
-10. `Load()` - 9 edges
+1. `App` - 30 edges
+2. `Config` - 22 edges
+3. `Controller` - 15 edges
+4. `Default()` - 13 edges
+5. `logf_()` - 12 edges
+6. `main()` - 11 edges
+7. `Parse()` - 11 edges
+8. `Context` - 10 edges
+9. `Resolve()` - 10 edges
+10. `on_change()` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `main()` --calls--> `Default()`  [INFERRED]
@@ -55,93 +65,129 @@
   cmd/taskglass/main_windows.go → internal/config/config.go
 - `main()` --calls--> `Save()`  [INFERRED]
   cmd/taskglass/main_windows.go → internal/config/config.go
-- `New()` --calls--> `Available()`  [INFERRED]
-  internal/app/app_windows.go → internal/xaml/xaml_windows.go
+- `main()` --calls--> `Parse()`  [INFERRED]
+  tools/genicon/main.go → internal/config/config.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (23 total, 3 thin omitted)
+## Communities (33 total, 4 thin omitted)
 
 ### Community 0 - "Config"
-Cohesion: 0.14
-Nodes (25): fatal(), Logger, main(), newLogger(), Accent, Appearance, Config, Rule (+17 more)
+Cohesion: 0.10
+Nodes (37): Appearance, AppRule, Config, Rule, Taskbars, Theme, TrayIcon, Default() (+29 more)
 
-### Community 1 - "TaskGlass"
-Cohesion: 0.08
-Nodes (22): Branching, Contributing, Development, Knowledge graph (optional), Architecture, Design choices, How the effect works, Main loop (+14 more)
+### Community 1 - "README.md"
+Cohesion: 0.05
+Nodes (37): Branching, Contributing, Development, Knowledge graph (optional), Appearance and assets, Architecture, Design choices, How the effect works (+29 more)
 
 ### Community 2 - "winapi_windows.go"
 Cohesion: 0.12
-Nodes (27): apply(), HWND, Logger, Time, New(), className(), cloaked(), enumTopLevel() (+19 more)
+Nodes (27): T, TestToPolicy(), HWND, Logger, Time, New(), toPolicy(), className() (+19 more)
 
-### Community 3 - "Resolve"
-Cohesion: 0.16
-Nodes (11): Attr, Handler, Resolve(), T, TestResolve(), TestResolveReturnsMatchingAppearance(), Level, Record (+3 more)
+### Community 3 - "multi"
+Cohesion: 0.24
+Nodes (5): Attr, Handler, Level, Record, multi
 
 ### Community 4 - "App"
-Cohesion: 0.15
-Nodes (10): App, CancelFunc, Logger, Time, New(), command(), Enabled(), Set() (+2 more)
+Cohesion: 0.10
+Nodes (23): App, menuItems, Options, panicGuard, Accent, check(), Bool, CancelFunc (+15 more)
 
 ### Community 5 - "Controller"
-Cohesion: 0.13
-Nodes (15): Duration, TaskbarAnchor(), WindowThreadPID(), Bool, CancelFunc, Handle, Logger, moduleLoaded() (+7 more)
+Cohesion: 0.09
+Nodes (21): Duration, TaskbarAnchor(), Handle, NotifyNull(), SetCallWndProcHook(), Unhook(), WindowThreadPID(), Available() (+13 more)
 
-### Community 6 - "HRESULT"
-Cohesion: 0.23
-Nodes (15): HRESULT, IObjectWithSite, IUnknown, C_QI(), DllCanUnloadNow(), DllGetClassObject(), F_Create(), F_QI() (+7 more)
+### Community 6 - "tap.c"
+Cohesion: 0.07
+Nodes (70): DWORD, HINSTANCE, HRESULT, HSTRING, IClassFactory, IDispatchedHandler_, Inst, InstanceHandle (+62 more)
 
-### Community 7 - "TaskGlass"
+### Community 7 - "items"
+Cohesion: 0.07
+Nodes (35): $ref, properties, description, items, maxItems, type, $ref, additionalProperties (+27 more)
+
+### Community 8 - "config.schema.json"
+Cohesion: 0.07
+Nodes (27): description, enum, type, additionalProperties, type, description, pattern, type (+19 more)
+
+### Community 9 - "[1.0.0] - 2026-11-17"
+Cohesion: 0.29
+Nodes (6): [1.0.0] - 2026-11-17, Added, Changed, Changelog, Fixed, Known limitations
+
+### Community 10 - "theme"
+Cohesion: 0.16
+Nodes (14): theme, tray_icon, default, description, enum, type, default, description (+6 more)
+
+### Community 12 - "main"
+Cohesion: 0.31
+Nodes (8): attachConsole(), fatal(), Logger, main(), newLogger(), signalQuit(), versionString(), watchForQuit()
+
+### Community 13 - "main.go"
+Cohesion: 0.83
+Nodes (3): entry, main(), writeICO()
+
+### Community 18 - "properties"
+Cohesion: 0.22
+Nodes (9): description, $ref, properties, maximized, $schema, version, type, const (+1 more)
+
+### Community 19 - "Watcher"
+Cohesion: 0.33
+Nodes (5): msg, point, Watcher, Logger, Start()
+
+### Community 20 - "enum"
 Cohesion: 0.25
-Nodes (8): Características, Contribuir, Cómo funciona, Instalación, Licencia, Limitaciones y seguridad, TaskGlass, Uso
+Nodes (8): default, enum, type, log_level, debug, error, info, warn
 
-### Community 8 - "tap.c"
-Cohesion: 0.32
-Nodes (12): DWORD, LONG, LPVOID, advise_thread(), any_tracked(), dispatch_apply(), init_call_thread(), install_thread() (+4 more)
+### Community 23 - "taskbars"
+Cohesion: 0.29
+Nodes (7): taskbars, default, description, enum, type, all, primary
 
-### Community 9 - "Changelog"
+### Community 24 - "debounce_ms"
+Cohesion: 0.33
+Nodes (6): default, description, maximum, minimum, type, debounce_ms
+
+### Community 25 - "poll_ms"
+Cohesion: 0.33
+Nodes (6): default, description, maximum, minimum, type, poll_ms
+
+### Community 26 - "refresh_ms"
+Cohesion: 0.33
+Nodes (6): refresh_ms, default, description, maximum, minimum, type
+
+### Community 27 - "hotkey"
 Cohesion: 0.50
-Nodes (3): Added, Changelog, [Unreleased]
+Nodes (4): default, description, type, hotkey
 
-### Community 10 - "logf_"
-Cohesion: 0.28
-Nodes (13): HSTRING, Inst, InstanceHandle, apply_all(), H_Invoke(), hs_eq(), logf_(), scan_from() (+5 more)
-
-### Community 12 - "ULONG"
-Cohesion: 0.19
-Nodes (13): IClassFactory, IDispatchedHandler_, IVisualTreeServiceCallback, C_AddRef(), C_Release(), F_AddRef(), F_Lock(), F_Release() (+5 more)
-
-### Community 18 - "BOOL"
+### Community 28 - "xaml_fix"
 Cohesion: 0.50
-Nodes (5): HINSTANCE, BOOL, DllMain(), host_is_explorer(), wants()
+Nodes (4): xaml_fix, default, description, type
 
-### Community 19 - "on_change"
-Cohesion: 0.70
-Nodes (5): C_OnChange(), on_change(), ParentChildRelation, VisualElement, VisualMutationType
+### Community 29 - "autostart_windows.go"
+Cohesion: 0.83
+Nodes (3): command(), Enabled(), Set()
 
-### Community 20 - "TaskGlassHookProc"
-Cohesion: 0.50
-Nodes (4): LPARAM, LRESULT, TaskGlassHookProc(), WPARAM
+### Community 30 - "start_menu"
+Cohesion: 0.67
+Nodes (3): start_menu, description, $ref
 
 ## Knowledge Gaps
-- **33 isolated node(s):** `github.com/AnderCMD/TaskGlass`, `wndClassEx`, `accentPolicy`, `windowCompositionAttribData`, `What and why` (+28 more)
+- **131 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+126 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **3 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Config` connect `Config` to `winapi_windows.go`, `Resolve`, `App`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
-- **Why does `App` connect `App` to `Config`, `winapi_windows.go`, `Controller`?**
-  _High betweenness centrality (0.062) - this node is a cross-community bridge._
-- **Why does `Context` connect `Resolve` to `winapi_windows.go`, `App`, `Controller`?**
-  _High betweenness centrality (0.059) - this node is a cross-community bridge._
-- **What connects `github.com/AnderCMD/TaskGlass`, `wndClassEx`, `accentPolicy` to the rest of the system?**
-  _33 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `App` connect `App` to `Config`, `winapi_windows.go`, `Controller`, `main`, `Watcher`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `properties` connect `properties` to `items`, `config.schema.json`, `theme`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `hotkey`, `xaml_fix`, `start_menu`?**
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+- **Why does `Config` connect `Config` to `winapi_windows.go`, `App`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **What connects `$schema`, `$id`, `title` to the rest of the system?**
+  _131 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Config` be split into smaller, more focused modules?**
-  _Cohesion score 0.1431451612903226 - nodes in this community are weakly interconnected._
-- **Should `TaskGlass` be split into smaller, more focused modules?**
-  _Cohesion score 0.082010582010582 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.09608843537414966 - nodes in this community are weakly interconnected._
+- **Should `README.md` be split into smaller, more focused modules?**
+  _Cohesion score 0.05094130675526024 - nodes in this community are weakly interconnected._
 - **Should `winapi_windows.go` be split into smaller, more focused modules?**
-  _Cohesion score 0.12096774193548387 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.125 - nodes in this community are weakly interconnected._
