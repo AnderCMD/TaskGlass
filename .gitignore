@@ -1,0 +1,8 @@
+dist/
+*.exe
+*.log
+.vscode/
+.idea/
+# graphify: keep the graph, drop caches
+graphify-out/cache/
+graphify-out/manifest.json

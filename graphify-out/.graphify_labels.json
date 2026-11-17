@@ -1,0 +1,20 @@
+{
+  "0": "Config",
+  "1": "README.md",
+  "2": "winapi_windows.go",
+  "3": "Resolve",
+  "4": "App",
+  "5": "Manager",
+  "6": "TaskGlass",
+  "7": "TaskGlass",
+  "8": "main",
+  "9": "Changelog",
+  "10": "autostart_windows.go",
+  "11": "PULL_REQUEST_TEMPLATE.md",
+  "12": "TestToPolicy",
+  "13": "main.go",
+  "14": "assets.go",
+  "15": "bug_report.md",
+  "16": "feature_request.md",
+  "17": "github.com/AnderCMD/TaskGlass"
+}
