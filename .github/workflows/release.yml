@@ -17,15 +17,16 @@ jobs:
           go-version-file: go.mod
       - run: go test ./...
       - name: Build
-        shell: bash
+        shell: pwsh
         run: |
-          v="${GITHUB_REF_NAME#v}"
-          for arch in amd64 arm64; do
-            GOOS=windows GOARCH=$arch go build -ldflags "-H=windowsgui -s -w -X main.version=$v" -o "dist/taskglass-windows-$arch.exe" ./cmd/taskglass
-          done
-          (cd dist && sha256sum *.exe > SHA256SUMS.txt)
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          $env:GOOS = "windows"; $env:GOARCH = "amd64"
+          go build -ldflags "-H=windowsgui -s -w -X main.version=$v" -o dist/taskglass.exe ./cmd/taskglass
+          ./scripts/build-tap.ps1
+          Compress-Archive -Path dist/taskglass.exe, dist/taskglass_tap.dll, LICENSE, README.md -DestinationPath "dist/taskglass-$v-windows-amd64.zip"
+          (Get-FileHash "dist/taskglass-$v-windows-amd64.zip" -Algorithm SHA256).Hash.ToLower() + "  taskglass-$v-windows-amd64.zip" | Out-File dist/SHA256SUMS.txt -Encoding ascii
       - name: Publish
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.exe dist/SHA256SUMS.txt --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS.txt --generate-notes

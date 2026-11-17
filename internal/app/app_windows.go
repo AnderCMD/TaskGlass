@@ -17,6 +17,7 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/autostart"
 	"github.com/AnderCMD/TaskGlass/internal/config"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
+	"github.com/AnderCMD/TaskGlass/internal/xaml"
 )
 
 // App is the running TaskGlass instance.
@@ -31,6 +32,7 @@ type App struct {
 	modTime time.Time
 
 	mgr    *taskbar.Manager
+	xaml   *xaml.Controller // nil when the TAP DLL is unavailable
 	cancel context.CancelFunc
 	done   chan struct{}
 }
@@ -41,6 +43,11 @@ func New(log *slog.Logger, cfgPath, version string, cfg config.Config) *App {
 	a := &App{log: log, cfgPath: cfgPath, exe: exe, version: version, cfg: cfg, mgr: taskbar.New(log)}
 	if st, err := os.Stat(cfgPath); err == nil {
 		a.modTime = st.ModTime()
+	}
+	if p, ok := xaml.Available(exe); ok {
+		a.xaml = xaml.New(log, p)
+	} else {
+		log.Warn("taskglass_tap.dll not found next to the executable: on Windows 11 the taskbar cannot become fully transparent", "expected", p)
 	}
 	return a
 }
@@ -99,6 +106,14 @@ func (a *App) reload() {
 func (a *App) loop(ctx context.Context) {
 	defer close(a.done)
 	defer a.mgr.Restore()
+	if a.xaml != nil {
+		if err := a.xaml.Start(); err != nil {
+			a.log.Warn("xaml fix disabled", "err", err)
+			a.xaml = nil
+		} else {
+			defer a.xaml.Stop() // runs before Restore: show the XAML fill, then reset the accent
+		}
+	}
 	var tick *time.Ticker
 	var interval time.Duration
 	defer func() {
@@ -115,7 +130,10 @@ func (a *App) loop(ctx context.Context) {
 			}
 			interval, tick = d, time.NewTicker(d)
 		}
-		a.mgr.Tick(c)
+		styled := a.mgr.Tick(c)
+		if a.xaml != nil {
+			a.xaml.SetHide(c.XamlFix && styled)
+		}
 		select {
 		case <-ctx.Done():
 			return

@@ -10,7 +10,8 @@ File: `%APPDATA%\TaskGlass\config.json` (created with defaults on first run). Ch
   "start_menu": { "enabled": false, "accent": "acrylic", "color": "#202020", "opacity": 60 },
   "poll_ms": 100,
   "refresh_ms": 1000,
-  "log_level": "info"
+  "log_level": "info",
+  "xaml_fix": true
 }
 ```
 
@@ -24,5 +25,6 @@ File: `%APPDATA%\TaskGlass\config.json` (created with defaults on first run). Ch
 | `poll_ms` | 16-5000 | How often window state is sampled |
 | `refresh_ms` | `poll_ms`-60000 | Re-apply interval even without changes |
 | `log_level` | `debug`, `info`, `warn`, `error` | Log verbosity |
+| `xaml_fix` | bool | Remove Windows 11's own XAML taskbar fill (needs `taskglass_tap.dll` next to the exe). Without it, `clear` cannot be fully transparent. Set to `false` to never load anything into Explorer |
 
 Rule priority: `start_menu` > `maximized` > `default`. Unknown keys are rejected so typos are caught.

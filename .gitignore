@@ -6,3 +6,4 @@ dist/
 # graphify: keep the graph, drop caches
 graphify-out/cache/
 graphify-out/manifest.json
+graphify-out/20*/

@@ -18,6 +18,7 @@ go vet ./...
 go test ./...
 gofmt -l .          # must print nothing
 go build -o dist/taskglass.exe ./cmd/taskglass
+powershell -File scripts/build-tap.ps1     # needs MinGW-w64 (winget install MartinStorsjo.LLVM-MinGW.UCRT)
 go run ./cmd/taskglass --verbose
 ```
 
@@ -25,6 +26,7 @@ Rules of thumb:
 
 - Keep Win32 calls inside `internal/winapi`. Put decisions in `internal/state` and `internal/config` so they stay unit-testable.
 - Add or update tests for behaviour changes; update `docs/` and `CHANGELOG.md`.
+- The native TAP runs inside `explorer.exe`: keep it small, check every HRESULT, never touch XAML objects off the UI thread, and never crash. Test changes on a real machine and mention the Windows build.
 - Never leave the taskbar modified on a failure path: anything that applies an effect must be undone by `Restore`.
 - Conventional-style commit messages (`feat:`, `fix:`, `docs:`...) are appreciated.
 

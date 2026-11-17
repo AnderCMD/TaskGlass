@@ -75,6 +75,10 @@ type Config struct {
 	RefreshMs int `json:"refresh_ms"`
 	// LogLevel is one of debug, info, warn, error.
 	LogLevel string `json:"log_level"`
+	// XamlFix removes Windows 11's own XAML taskbar fill (needs
+	// taskglass_tap.dll next to the executable). Without it the taskbar can
+	// never become fully transparent on Windows 11.
+	XamlFix bool `json:"xaml_fix"`
 }
 
 // Default returns the built-in configuration.
@@ -93,6 +97,7 @@ func Default() Config {
 		PollMs:    100,
 		RefreshMs: 1000,
 		LogLevel:  "info",
+		XamlFix:   true,
 	}
 }
 

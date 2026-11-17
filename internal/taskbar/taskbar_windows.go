@@ -31,8 +31,9 @@ func New(log *slog.Logger) *Manager {
 }
 
 // Tick samples the desktop and updates every taskbar. Call it periodically
-// from a single goroutine.
-func (m *Manager) Tick(c config.Config) {
+// from a single goroutine. It reports whether any taskbar currently has a
+// non-stock appearance (used to decide whether to hide the XAML fill).
+func (m *Manager) Tick(c config.Config) (styled bool) {
 	bars := winapi.Taskbars()
 	alive := make(map[winapi.HWND]bool, len(bars))
 	var maxed map[uintptr]bool
@@ -46,6 +47,9 @@ func (m *Manager) Tick(c config.Config) {
 		alive[h] = true
 		ctx := state.Context{StartMenu: start, Maximized: maxed[winapi.Monitor(h)]}
 		ap, kind := state.Resolve(c, ctx)
+		if ap.Accent != config.AccentNormal {
+			styled = true
+		}
 
 		prev, ok := m.seen[h]
 		if ok && prev.ap == ap && time.Since(prev.at) < refresh {
@@ -65,6 +69,7 @@ func (m *Manager) Tick(c config.Config) {
 			delete(m.seen, h) // taskbar went away (Explorer restart, monitor unplugged)
 		}
 	}
+	return styled
 }
 
 // Restore puts every taskbar back to the stock Windows look.

@@ -23,7 +23,12 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
       - run: go build -ldflags "-H=windowsgui -s -w" -o dist/taskglass.exe ./cmd/taskglass
+      - name: Build native TAP
+        shell: pwsh
+        run: ./scripts/build-tap.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: taskglass-windows-amd64
-          path: dist/taskglass.exe
+          path: |
+            dist/taskglass.exe
+            dist/taskglass_tap.dll

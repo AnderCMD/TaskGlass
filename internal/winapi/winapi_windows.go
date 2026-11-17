@@ -35,6 +35,9 @@ var (
 	procGetClassNameW   = user32.NewProc("GetClassNameW")
 	procGetWindowPID    = user32.NewProc("GetWindowThreadProcessId")
 	procSendMessageW    = user32.NewProc("SendMessageW")
+	procSendNotifyMsgW  = user32.NewProc("SendNotifyMessageW")
+	procSetWindowsHook  = user32.NewProc("SetWindowsHookExW")
+	procUnhookWindows   = user32.NewProc("UnhookWindowsHookEx")
 
 	procDwmGetWindowAttribute = dwmapi.NewProc("DwmGetWindowAttribute")
 )
@@ -128,6 +131,35 @@ func Taskbars() []HWND {
 	}
 	return out
 }
+
+// WindowThreadPID returns the thread and process that own hwnd (0, 0 if unknown).
+func WindowThreadPID(hwnd HWND) (tid, pid uint32) {
+	t, _, _ := procGetWindowPID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
+	return uint32(t), pid
+}
+
+const (
+	whCallWndProc = 4
+	wmNull        = 0
+)
+
+// SetCallWndProcHook installs a WH_CALLWNDPROC hook whose procedure lives in
+// module mod, on thread tid. Windows loads mod into that thread's process the
+// first time the hook fires; see NotifyNull.
+func SetCallWndProcHook(proc uintptr, mod windows.Handle, tid uint32) (uintptr, error) {
+	h, _, err := procSetWindowsHook.Call(whCallWndProc, proc, uintptr(mod), uintptr(tid))
+	if h == 0 {
+		return 0, err
+	}
+	return h, nil
+}
+
+// Unhook removes a hook installed with SetCallWndProcHook.
+func Unhook(h uintptr) { procUnhookWindows.Call(h) }
+
+// NotifyNull posts WM_NULL to hwnd without waiting, which is enough to make a
+// WH_CALLWNDPROC hook on its thread fire.
+func NotifyNull(hwnd HWND) { procSendNotifyMsgW.Call(hwnd, wmNull, 0, 0) }
 
 // Monitor returns the monitor handle that contains hwnd.
 func Monitor(hwnd HWND) uintptr {

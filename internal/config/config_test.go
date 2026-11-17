@@ -54,6 +54,20 @@ func TestParsePartialKeepsDefaults(t *testing.T) {
 	}
 }
 
+func TestXamlFixDefaultsOnAndCanBeDisabled(t *testing.T) {
+	if !Default().XamlFix {
+		t.Fatal("xaml_fix should default to true")
+	}
+	c, err := Parse([]byte(`{"version":1}`))
+	if err != nil || !c.XamlFix {
+		t.Fatalf("missing key must keep the default: %+v %v", c, err)
+	}
+	c, err = Parse([]byte(`{"version":1,"xaml_fix":false}`))
+	if err != nil || c.XamlFix {
+		t.Fatalf("explicit false must stick: %+v %v", c, err)
+	}
+}
+
 func TestLoadCreatesDefaultsAndRoundTrips(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "sub", "config.json")
 	c, err := Load(p)
