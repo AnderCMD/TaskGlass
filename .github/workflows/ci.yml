@@ -27,9 +27,13 @@ jobs:
       - name: Build native TAP
         shell: pwsh
         run: ./scripts/build-tap.ps1
+      - name: Build installer
+        shell: pwsh
+        run: ./scripts/build-installer.ps1 -Version 0.0.0-ci
       - uses: actions/upload-artifact@v7
         with:
           name: taskglass-windows-amd64
           path: |
             dist/taskglass.exe
             dist/taskglass_tap.dll
+            dist/*-Setup.exe
