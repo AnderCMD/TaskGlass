@@ -23,7 +23,7 @@ jobs:
           $env:GOOS = "windows"; $env:GOARCH = "amd64"
           go build -ldflags "-H=windowsgui -s -w -X main.version=$v" -o dist/taskglass.exe ./cmd/taskglass
           ./scripts/build-tap.ps1
-          Compress-Archive -Path dist/taskglass.exe, dist/taskglass_tap.dll, LICENSE, README.md -DestinationPath "dist/taskglass-$v-windows-amd64.zip"
+          Compress-Archive -Path dist/taskglass.exe, dist/taskglass_tap.dll, LICENSE, NOTICE, README.md -DestinationPath "dist/taskglass-$v-windows-amd64.zip"
           ./scripts/build-installer.ps1 -Version $v
           Get-ChildItem dist/*.zip, dist/*-Setup.exe | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"

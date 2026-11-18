@@ -131,8 +131,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "cmd_taskglass_multi_windows",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "multi_windows.go"
     },
     {
@@ -142,8 +142,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "taskglass_multi",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "multi"
     },
     {
@@ -153,8 +153,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "taskglass_multi_enabled",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": ".enabled()"
     },
     {
@@ -164,8 +164,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "level",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "level"
     },
     {
@@ -175,8 +175,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "taskglass_multi_handle",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": ".handle()"
     },
     {
@@ -186,8 +186,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "record",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "record"
     },
     {
@@ -197,8 +197,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "taskglass_multi_withattrs",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": ".withattrs()"
     },
     {
@@ -208,8 +208,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "attr",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "attr"
     },
     {
@@ -219,8 +219,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "handler",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "handler"
     },
     {
@@ -230,8 +230,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "taskglass_multi_withgroup",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": ".withgroup()"
     },
     {
@@ -318,7 +318,7 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "docs_config_schema_definitions",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "definitions"
     },
@@ -329,7 +329,7 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "docs_config_schema_definitions_accent",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "accent"
     },
@@ -340,7 +340,7 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "docs_config_schema_accent_type",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "type"
     },
@@ -351,8 +351,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "docs_config_schema_accent_enum",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 44,
+      "community_name": "enum",
       "norm_label": "enum"
     },
     {
@@ -362,8 +362,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "ref_clear",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 44,
+      "community_name": "enum",
       "norm_label": "clear"
     },
     {
@@ -373,8 +373,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "ref_blur",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 44,
+      "community_name": "enum",
       "norm_label": "blur"
     },
     {
@@ -384,8 +384,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "ref_acrylic",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 44,
+      "community_name": "enum",
       "norm_label": "acrylic"
     },
     {
@@ -395,8 +395,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "ref_opaque",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 44,
+      "community_name": "enum",
       "norm_label": "opaque"
     },
     {
@@ -406,8 +406,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "ref_normal",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 44,
+      "community_name": "enum",
       "norm_label": "normal"
     },
     {
@@ -417,7 +417,7 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "docs_config_schema_accent_description",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "description"
     },
@@ -428,7 +428,7 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "docs_config_schema_definitions_color",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "color"
     },
@@ -439,7 +439,7 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "docs_config_schema_color_type",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "type"
     },
@@ -450,7 +450,7 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "docs_config_schema_color_pattern",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "pattern"
     },
@@ -461,7 +461,7 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "docs_config_schema_color_description",
-      "community": 7,
+      "community": 12,
       "community_name": "definitions",
       "norm_label": "description"
     },
@@ -472,8 +472,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "docs_config_schema_definitions_opacity",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 46,
+      "community_name": "opacity",
       "norm_label": "opacity"
     },
     {
@@ -483,8 +483,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "docs_config_schema_opacity_type",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 46,
+      "community_name": "opacity",
       "norm_label": "type"
     },
     {
@@ -494,8 +494,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "docs_config_schema_opacity_minimum",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 46,
+      "community_name": "opacity",
       "norm_label": "minimum"
     },
     {
@@ -505,8 +505,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "docs_config_schema_opacity_maximum",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 46,
+      "community_name": "opacity",
       "norm_label": "maximum"
     },
     {
@@ -516,8 +516,8 @@
       "source_location": "L29",
       "_origin": "ast",
       "id": "docs_config_schema_opacity_description",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 46,
+      "community_name": "opacity",
       "norm_label": "description"
     },
     {
@@ -528,7 +528,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_definitions_appearance",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "appearance"
     },
     {
@@ -539,7 +539,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_appearance_type",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "type"
     },
     {
@@ -550,7 +550,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_appearance_properties",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "properties"
     },
     {
@@ -561,7 +561,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_properties_accent",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "accent"
     },
     {
@@ -572,7 +572,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_accent_ref",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "$ref"
     },
     {
@@ -583,7 +583,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_properties_color",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "color"
     },
     {
@@ -594,7 +594,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_color_ref",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "$ref"
     },
     {
@@ -605,7 +605,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_properties_opacity",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "opacity"
     },
     {
@@ -616,7 +616,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_opacity_ref",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "$ref"
     },
     {
@@ -626,8 +626,8 @@
       "source_location": "L45",
       "_origin": "ast",
       "id": "docs_config_schema_definitions_surface",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "surface"
     },
     {
@@ -637,8 +637,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "docs_config_schema_surface_type",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "type"
     },
     {
@@ -648,8 +648,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "docs_config_schema_surface_additionalproperties",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "additionalproperties"
     },
     {
@@ -659,8 +659,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "docs_config_schema_surface_properties",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "properties"
     },
     {
@@ -670,8 +670,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "docs_config_schema_properties_enabled",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "enabled"
     },
     {
@@ -681,8 +681,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "docs_config_schema_enabled_type",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "type"
     },
     {
@@ -693,7 +693,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_definitions_rule",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "rule"
     },
     {
@@ -704,7 +704,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_rule_type",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "type"
     },
     {
@@ -715,7 +715,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_rule_additionalproperties",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "additionalproperties"
     },
     {
@@ -726,7 +726,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_rule_properties",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "properties"
     },
     {
@@ -736,8 +736,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "docs_config_schema_enabled_description",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "description"
     },
     {
@@ -813,8 +813,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "docs_config_schema_enabled_default",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 42,
+      "community_name": "enabled",
       "norm_label": "default"
     },
     {
@@ -824,7 +824,7 @@
       "source_location": "L90",
       "_origin": "ast",
       "id": "docs_config_schema_properties_theme",
-      "community": 10,
+      "community": 48,
       "community_name": "theme",
       "norm_label": "theme"
     },
@@ -835,7 +835,7 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "docs_config_schema_theme_type",
-      "community": 10,
+      "community": 48,
       "community_name": "theme",
       "norm_label": "type"
     },
@@ -847,7 +847,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_theme_enum",
       "community": 10,
-      "community_name": "theme",
+      "community_name": "enum",
       "norm_label": "enum"
     },
     {
@@ -858,7 +858,7 @@
       "_origin": "ast",
       "id": "ref_auto",
       "community": 10,
-      "community_name": "theme",
+      "community_name": "enum",
       "norm_label": "auto"
     },
     {
@@ -869,7 +869,7 @@
       "_origin": "ast",
       "id": "ref_light",
       "community": 10,
-      "community_name": "theme",
+      "community_name": "enum",
       "norm_label": "light"
     },
     {
@@ -880,7 +880,7 @@
       "_origin": "ast",
       "id": "ref_dark",
       "community": 10,
-      "community_name": "theme",
+      "community_name": "enum",
       "norm_label": "dark"
     },
     {
@@ -890,7 +890,7 @@
       "source_location": "L97",
       "_origin": "ast",
       "id": "docs_config_schema_theme_default",
-      "community": 10,
+      "community": 48,
       "community_name": "theme",
       "norm_label": "default"
     },
@@ -901,7 +901,7 @@
       "source_location": "L98",
       "_origin": "ast",
       "id": "docs_config_schema_theme_description",
-      "community": 10,
+      "community": 48,
       "community_name": "theme",
       "norm_label": "description"
     },
@@ -1034,7 +1034,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_default_properties",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "properties"
     },
     {
@@ -1155,7 +1155,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_items_properties",
       "community": 7,
-      "community_name": "definitions",
+      "community_name": "opacity",
       "norm_label": "properties"
     },
     {
@@ -1165,8 +1165,8 @@
       "source_location": "L137",
       "_origin": "ast",
       "id": "docs_config_schema_properties_exe",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 47,
+      "community_name": "exe",
       "norm_label": "exe"
     },
     {
@@ -1176,8 +1176,8 @@
       "source_location": "L138",
       "_origin": "ast",
       "id": "docs_config_schema_exe_type",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 47,
+      "community_name": "exe",
       "norm_label": "type"
     },
     {
@@ -1187,8 +1187,8 @@
       "source_location": "L139",
       "_origin": "ast",
       "id": "docs_config_schema_exe_minlength",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 47,
+      "community_name": "exe",
       "norm_label": "minlength"
     },
     {
@@ -1198,8 +1198,8 @@
       "source_location": "L140",
       "_origin": "ast",
       "id": "docs_config_schema_exe_pattern",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 47,
+      "community_name": "exe",
       "norm_label": "pattern"
     },
     {
@@ -1209,8 +1209,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "docs_config_schema_exe_description",
-      "community": 7,
-      "community_name": "definitions",
+      "community": 47,
+      "community_name": "exe",
       "norm_label": "description"
     },
     {
@@ -1330,8 +1330,8 @@
       "source_location": "L169",
       "_origin": "ast",
       "id": "docs_config_schema_properties_tray_icon",
-      "community": 10,
-      "community_name": "theme",
+      "community": 49,
+      "community_name": "tray_icon",
       "norm_label": "tray_icon"
     },
     {
@@ -1341,8 +1341,8 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "docs_config_schema_tray_icon_type",
-      "community": 10,
-      "community_name": "theme",
+      "community": 49,
+      "community_name": "tray_icon",
       "norm_label": "type"
     },
     {
@@ -1353,7 +1353,7 @@
       "_origin": "ast",
       "id": "docs_config_schema_tray_icon_enum",
       "community": 10,
-      "community_name": "theme",
+      "community_name": "enum",
       "norm_label": "enum"
     },
     {
@@ -1364,7 +1364,7 @@
       "_origin": "ast",
       "id": "ref_color",
       "community": 10,
-      "community_name": "theme",
+      "community_name": "enum",
       "norm_label": "color"
     },
     {
@@ -1374,8 +1374,8 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "docs_config_schema_tray_icon_default",
-      "community": 10,
-      "community_name": "theme",
+      "community": 49,
+      "community_name": "tray_icon",
       "norm_label": "default"
     },
     {
@@ -1385,8 +1385,8 @@
       "source_location": "L178",
       "_origin": "ast",
       "id": "docs_config_schema_tray_icon_description",
-      "community": 10,
-      "community_name": "theme",
+      "community": 49,
+      "community_name": "tray_icon",
       "norm_label": "description"
     },
     {
@@ -2256,8 +2256,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "internal_autostart_autostart_windows",
-      "community": 46,
-      "community_name": "autostart_windows.go",
+      "community": 4,
+      "community_name": "App",
       "norm_label": "autostart_windows.go"
     },
     {
@@ -2267,8 +2267,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "internal_autostart_autostart_windows_command",
-      "community": 46,
-      "community_name": "autostart_windows.go",
+      "community": 4,
+      "community_name": "App",
       "norm_label": "command()"
     },
     {
@@ -2278,8 +2278,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "internal_autostart_autostart_windows_enabled",
-      "community": 46,
-      "community_name": "autostart_windows.go",
+      "community": 4,
+      "community_name": "App",
       "norm_label": "enabled()"
     },
     {
@@ -2289,8 +2289,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "internal_autostart_autostart_windows_set",
-      "community": 46,
-      "community_name": "autostart_windows.go",
+      "community": 4,
+      "community_name": "App",
       "norm_label": "set()"
     },
     {
@@ -2960,8 +2960,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "internal_state_state",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "state.go"
     },
     {
@@ -2971,8 +2971,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "state_kind",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "kind"
     },
     {
@@ -2982,8 +2982,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "state_context",
-      "community": 12,
-      "community_name": "Context",
+      "community": 5,
+      "community_name": "Controller",
       "norm_label": "context"
     },
     {
@@ -2993,8 +2993,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "internal_state_state_resolve",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "resolve()"
     },
     {
@@ -3004,8 +3004,8 @@
       "source_location": "L48",
       "_origin": "ast",
       "id": "internal_state_state_needswindowscan",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "needswindowscan()"
     },
     {
@@ -3015,8 +3015,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "internal_state_state_test",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "state_test.go"
     },
     {
@@ -3026,8 +3026,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "internal_state_state_test_testresolve",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "testresolve()"
     },
     {
@@ -3037,8 +3037,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "internal_state_state_test_go_t",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "t"
     },
     {
@@ -3048,8 +3048,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "internal_state_state_test_testdisabledresolvestonormal",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "testdisabledresolvestonormal()"
     },
     {
@@ -3059,8 +3059,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "internal_state_state_test_testresolvereturnsmatchingappearance",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "testresolvereturnsmatchingappearance()"
     },
     {
@@ -3070,8 +3070,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "internal_state_state_test_testfirstmatchingapprulewins",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "testfirstmatchingapprulewins()"
     },
     {
@@ -3081,8 +3081,8 @@
       "source_location": "L72",
       "_origin": "ast",
       "id": "internal_state_state_test_testneedswindowscan",
-      "community": 12,
-      "community_name": "Context",
+      "community": 29,
+      "community_name": "Config",
       "norm_label": "testneedswindowscan()"
     },
     {
@@ -3334,8 +3334,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "internal_winapi_anchor_windows",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 45,
+      "community_name": "anchor_windows.go",
       "norm_label": "anchor_windows.go"
     },
     {
@@ -3345,8 +3345,8 @@
       "source_location": "L25",
       "_origin": "ast",
       "id": "winapi_wndclassex",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 45,
+      "community_name": "anchor_windows.go",
       "norm_label": "wndclassex"
     },
     {
@@ -3356,8 +3356,8 @@
       "source_location": "L40",
       "_origin": "ast",
       "id": "winapi_point",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 45,
+      "community_name": "anchor_windows.go",
       "norm_label": "point"
     },
     {
@@ -3367,8 +3367,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "winapi_msg",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 45,
+      "community_name": "anchor_windows.go",
       "norm_label": "msg"
     },
     {
@@ -3378,8 +3378,8 @@
       "source_location": "L58",
       "_origin": "ast",
       "id": "internal_winapi_anchor_windows_taskbaranchor",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 45,
+      "community_name": "anchor_windows.go",
       "norm_label": "taskbaranchor()"
     },
     {
@@ -3389,8 +3389,8 @@
       "source_location": "",
       "_origin": "ast",
       "id": "internal_winapi_anchor_windows_go_duration",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 45,
+      "community_name": "anchor_windows.go",
       "norm_label": "duration"
     },
     {
@@ -3565,8 +3565,8 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "internal_winapi_winapi_windows_windowthreadpid",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 2,
+      "community_name": "winapi_windows.go",
       "norm_label": "windowthreadpid()"
     },
     {
@@ -3598,8 +3598,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "internal_winapi_winapi_windows_unhook",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 2,
+      "community_name": "winapi_windows.go",
       "norm_label": "unhook()"
     },
     {
@@ -3609,8 +3609,8 @@
       "source_location": "L162",
       "_origin": "ast",
       "id": "internal_winapi_winapi_windows_notifynull",
-      "community": 5,
-      "community_name": "Controller",
+      "community": 2,
+      "community_name": "winapi_windows.go",
       "norm_label": "notifynull()"
     },
     {
@@ -5075,10 +5075,32 @@
       "norm_label": "changelog"
     },
     {
-      "label": "[1.1.0] - 2026-11-18",
+      "label": "[Unreleased]",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
       "source_location": "L5",
+      "_origin": "ast",
+      "id": "changelog_unreleased",
+      "community": 9,
+      "community_name": "[1.0.0] - 2026-11-17",
+      "norm_label": "[unreleased]"
+    },
+    {
+      "label": "Changed",
+      "file_type": "document",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "changelog_changed",
+      "community": 9,
+      "community_name": "[1.0.0] - 2026-11-17",
+      "norm_label": "changed"
+    },
+    {
+      "label": "[1.1.0] - 2026-11-18",
+      "file_type": "document",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L10",
       "_origin": "ast",
       "id": "changelog_1_1_0_2026_11_18",
       "community": 9,
@@ -5089,7 +5111,7 @@
       "label": "Added",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L7",
+      "source_location": "L12",
       "_origin": "ast",
       "id": "changelog_added",
       "community": 9,
@@ -5100,9 +5122,9 @@
       "label": "Changed",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L13",
+      "source_location": "L18",
       "_origin": "ast",
-      "id": "changelog_changed",
+      "id": "changelog_changed_18",
       "community": 9,
       "community_name": "[1.0.0] - 2026-11-17",
       "norm_label": "changed"
@@ -5111,7 +5133,7 @@
       "label": "Known limitations",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L23",
+      "source_location": "L28",
       "_origin": "ast",
       "id": "changelog_known_limitations",
       "community": 9,
@@ -5122,7 +5144,7 @@
       "label": "[1.0.1] - 2026-11-17",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L26",
+      "source_location": "L31",
       "_origin": "ast",
       "id": "changelog_1_0_1_2026_11_17",
       "community": 9,
@@ -5133,9 +5155,9 @@
       "label": "Changed",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L28",
+      "source_location": "L33",
       "_origin": "ast",
-      "id": "changelog_changed_28",
+      "id": "changelog_changed_33",
       "community": 9,
       "community_name": "[1.0.0] - 2026-11-17",
       "norm_label": "changed"
@@ -5144,7 +5166,7 @@
       "label": "[1.0.0] - 2026-11-17",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L32",
+      "source_location": "L37",
       "_origin": "ast",
       "id": "changelog_1_0_0_2026_11_17",
       "community": 9,
@@ -5155,9 +5177,9 @@
       "label": "Added",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L36",
+      "source_location": "L41",
       "_origin": "ast",
-      "id": "changelog_added_36",
+      "id": "changelog_added_41",
       "community": 9,
       "community_name": "[1.0.0] - 2026-11-17",
       "norm_label": "added"
@@ -5166,9 +5188,9 @@
       "label": "Changed",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L47",
+      "source_location": "L52",
       "_origin": "ast",
-      "id": "changelog_changed_47",
+      "id": "changelog_changed_52",
       "community": 9,
       "community_name": "[1.0.0] - 2026-11-17",
       "norm_label": "changed"
@@ -5177,7 +5199,7 @@
       "label": "Fixed",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L51",
+      "source_location": "L56",
       "_origin": "ast",
       "id": "changelog_fixed",
       "community": 9,
@@ -5188,9 +5210,9 @@
       "label": "Known limitations",
       "file_type": "document",
       "source_file": "CHANGELOG.md",
-      "source_location": "L57",
+      "source_location": "L62",
       "_origin": "ast",
-      "id": "changelog_known_limitations_57",
+      "id": "changelog_known_limitations_62",
       "community": 9,
       "community_name": "[1.0.0] - 2026-11-17",
       "norm_label": "known limitations"
@@ -5265,7 +5287,7 @@
       "label": "Knowledge graph (optional)",
       "file_type": "document",
       "source_file": "CONTRIBUTING.md",
-      "source_location": "L41",
+      "source_location": "L42",
       "_origin": "ast",
       "id": "contributing_knowledge_graph_optional",
       "community": 38,
@@ -15096,7 +15118,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L32",
+      "source_location": "L37",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_changelog",
@@ -15107,7 +15129,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L26",
+      "source_location": "L31",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_changelog",
@@ -15118,7 +15140,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L5",
+      "source_location": "L10",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_changelog",
@@ -15129,7 +15151,29 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
+      "source_location": "L5",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "changelog_changelog",
+      "target": "changelog_unreleased",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CHANGELOG.md",
       "source_location": "L7",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "changelog_unreleased",
+      "target": "changelog_changed",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "CHANGELOG.md",
+      "source_location": "L12",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_1_0_2026_11_18",
@@ -15140,18 +15184,18 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L13",
+      "source_location": "L18",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_1_0_2026_11_18",
-      "target": "changelog_changed",
+      "target": "changelog_changed_18",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L23",
+      "source_location": "L28",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_1_0_2026_11_18",
@@ -15162,40 +15206,40 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L28",
+      "source_location": "L33",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_0_1_2026_11_17",
-      "target": "changelog_changed_28",
+      "target": "changelog_changed_33",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L36",
+      "source_location": "L41",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_0_0_2026_11_17",
-      "target": "changelog_added_36",
+      "target": "changelog_added_41",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L47",
+      "source_location": "L52",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_0_0_2026_11_17",
-      "target": "changelog_changed_47",
+      "target": "changelog_changed_52",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L51",
+      "source_location": "L56",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_0_0_2026_11_17",
@@ -15206,11 +15250,11 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CHANGELOG.md",
-      "source_location": "L57",
+      "source_location": "L62",
       "weight": 1.0,
       "_origin": "ast",
       "source": "changelog_1_0_0_2026_11_17",
-      "target": "changelog_known_limitations_57",
+      "target": "changelog_known_limitations_62",
       "confidence_score": 1.0
     },
     {
@@ -15283,7 +15327,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "CONTRIBUTING.md",
-      "source_location": "L41",
+      "source_location": "L42",
       "weight": 1.0,
       "_origin": "ast",
       "source": "contributing_contributing",
@@ -15831,5 +15875,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "24a6a5edbe73a18a6a8428d6f3ca71df6ed8a690"
+  "built_at_commit": "4a191fda494f23fdcdeef3f9eb392cd0f581c4a6"
 }

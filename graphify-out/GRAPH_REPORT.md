@@ -1,16 +1,16 @@
 # Graph Report - TaskGlass  (2026-11-18)
 
 ## Corpus Check
-- 41 files · ~88,292 words
+- 41 files · ~88,379 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 521 nodes · 872 edges · 44 communities (39 shown, 5 thin omitted)
+- 523 nodes · 874 edges · 50 communities (45 shown, 5 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 65 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `24a6a5ed`
+- Built from commit: `4a191fda`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -22,12 +22,12 @@
 - App
 - Controller
 - tap.c
-- definitions
+- opacity
 - config.schema.json
 - [1.0.0] - 2026-11-17
-- theme
+- enum
 - PULL_REQUEST_TEMPLATE.md
-- Context
+- definitions
 - TaskGlassHookProc
 - github.com/AnderCMD/TaskGlass
 - properties
@@ -51,8 +51,14 @@
 - Security Policy
 - default
 - main.go
+- enabled
 - hotkey
-- autostart_windows.go
+- enum
+- anchor_windows.go
+- opacity
+- exe
+- theme
+- tray_icon
 
 ## God Nodes (most connected - your core abstractions)
 1. `App` - 32 edges
@@ -81,7 +87,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (44 total, 5 thin omitted)
+## Communities (50 total, 5 thin omitted)
 
 ### Community 0 - "main"
 Cohesion: 0.31
@@ -92,44 +98,44 @@ Cohesion: 0.18
 Nodes (10): Before you start, Contributing, Features, How it works, Install, License, Limitations and safety, Roadmap (+2 more)
 
 ### Community 2 - "winapi_windows.go"
-Cohesion: 0.12
-Nodes (26): T, TestToPolicy(), HWND, Logger, Time, New(), toPolicy(), className() (+18 more)
+Cohesion: 0.11
+Nodes (29): T, TestToPolicy(), HWND, Logger, Time, New(), toPolicy(), className() (+21 more)
 
 ### Community 3 - "hotkey_enabled"
 Cohesion: 0.50
 Nodes (4): default, description, type, hotkey_enabled
 
 ### Community 4 - "App"
-Cohesion: 0.09
-Nodes (23): App, menuItems, Options, panicGuard, Int32, check(), Bool, CancelFunc (+15 more)
+Cohesion: 0.08
+Nodes (26): App, menuItems, Options, panicGuard, Int32, check(), Bool, CancelFunc (+18 more)
 
 ### Community 5 - "Controller"
 Cohesion: 0.07
-Nodes (28): GUID, Duration, TaskbarAnchor(), Duration, TrayProbe(), Handle, NotifyNull(), SetCallWndProcHook() (+20 more)
+Nodes (26): Attr, GUID, Handler, Duration, TrayProbe(), Handle, SetCallWndProcHook(), Available() (+18 more)
 
 ### Community 6 - "tap.c"
 Cohesion: 0.07
 Nodes (68): DWORD, HINSTANCE, HRESULT, HSTRING, IClassFactory, IDispatchedHandler_, Inst, InstanceHandle (+60 more)
 
-### Community 7 - "definitions"
-Cohesion: 0.05
-Nodes (47): description, enum, $ref, type, properties, type, description, pattern (+39 more)
+### Community 7 - "opacity"
+Cohesion: 0.19
+Nodes (15): $ref, properties, type, $ref, properties, appearance, rule, properties (+7 more)
 
 ### Community 8 - "config.schema.json"
 Cohesion: 0.29
 Nodes (6): additionalProperties, description, $id, $schema, title, type
 
 ### Community 9 - "[1.0.0] - 2026-11-17"
-Cohesion: 0.15
-Nodes (12): [1.0.0] - 2026-11-17, [1.0.1] - 2026-11-17, [1.1.0] - 2026-11-18, Added, Added, Changed, Changed, Changed (+4 more)
+Cohesion: 0.13
+Nodes (14): [1.0.0] - 2026-11-17, [1.0.1] - 2026-11-17, [1.1.0] - 2026-11-18, Added, Added, Changed, Changed, Changed (+6 more)
 
-### Community 10 - "theme"
-Cohesion: 0.16
-Nodes (14): theme, tray_icon, default, description, enum, type, default, description (+6 more)
+### Community 10 - "enum"
+Cohesion: 0.47
+Nodes (6): enum, enum, auto, color, dark, light
 
-### Community 12 - "Context"
-Cohesion: 0.15
-Nodes (15): Attr, Handler, NeedsWindowScan(), Resolve(), T, TestDisabledResolvesToNormal(), TestFirstMatchingAppRuleWins(), TestNeedsWindowScan() (+7 more)
+### Community 12 - "definitions"
+Cohesion: 0.25
+Nodes (8): description, type, description, pattern, type, definitions, accent, color
 
 ### Community 13 - "TaskGlassHookProc"
 Cohesion: 0.50
@@ -172,8 +178,8 @@ Cohesion: 0.50
 Nodes (4): xaml_fix, default, description, type
 
 ### Community 29 - "Config"
-Cohesion: 0.09
-Nodes (38): Accent, Appearance, AppRule, Config, Percent, Rule, Surface, Surfaces (+30 more)
+Cohesion: 0.08
+Nodes (47): Accent, Appearance, AppRule, Config, Percent, Rule, Surface, Surfaces (+39 more)
 
 ### Community 30 - "Architecture"
 Cohesion: 0.18
@@ -207,16 +213,40 @@ Nodes (4): additionalProperties, description, type, default
 Cohesion: 0.83
 Nodes (3): entry, main(), writeICO()
 
+### Community 42 - "enabled"
+Cohesion: 0.25
+Nodes (8): surface, default, description, type, enabled, additionalProperties, properties, type
+
 ### Community 43 - "hotkey"
 Cohesion: 0.50
 Nodes (4): default, description, type, hotkey
 
-### Community 46 - "autostart_windows.go"
-Cohesion: 0.83
-Nodes (3): command(), Enabled(), Set()
+### Community 44 - "enum"
+Cohesion: 0.33
+Nodes (6): enum, acrylic, blur, clear, normal, opaque
+
+### Community 45 - "anchor_windows.go"
+Cohesion: 0.40
+Nodes (5): Duration, TaskbarAnchor(), msg, point, wndClassEx
+
+### Community 46 - "opacity"
+Cohesion: 0.40
+Nodes (5): opacity, description, maximum, minimum, type
+
+### Community 47 - "exe"
+Cohesion: 0.40
+Nodes (5): description, minLength, pattern, type, exe
+
+### Community 48 - "theme"
+Cohesion: 0.50
+Nodes (4): theme, default, description, type
+
+### Community 49 - "tray_icon"
+Cohesion: 0.50
+Nodes (4): tray_icon, default, description, type
 
 ## Knowledge Gaps
-- **153 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+148 more)
+- **154 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+149 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -224,16 +254,16 @@ Nodes (3): command(), Enabled(), Set()
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `App` connect `App` to `main`, `winapi_windows.go`, `Controller`, `Watcher`, `Config`?**
-  _High betweenness centrality (0.069) - this node is a cross-community bridge._
-- **Why does `properties` connect `properties` to `hotkey_enabled`, `items`, `definitions`, `config.schema.json`, `default`, `theme`, `hotkey`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `surfaces`, `xaml_fix`?**
-  _High betweenness centrality (0.061) - this node is a cross-community bridge._
-- **Why does `Config` connect `Config` to `winapi_windows.go`, `App`, `Context`?**
+  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+- **Why does `properties` connect `properties` to `hotkey_enabled`, `items`, `config.schema.json`, `default`, `enabled`, `hotkey`, `theme`, `tray_icon`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `surfaces`, `xaml_fix`?**
+  _High betweenness centrality (0.060) - this node is a cross-community bridge._
+- **Why does `Config` connect `Config` to `winapi_windows.go`, `App`?**
   _High betweenness centrality (0.059) - this node is a cross-community bridge._
 - **What connects `$schema`, `$id`, `title` to the rest of the system?**
-  _153 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _154 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `winapi_windows.go` be split into smaller, more focused modules?**
-  _Cohesion score 0.125 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11260504201680673 - nodes in this community are weakly interconnected._
 - **Should `App` be split into smaller, more focused modules?**
-  _Cohesion score 0.0927536231884058 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08326530612244898 - nodes in this community are weakly interconnected._
 - **Should `Controller` be split into smaller, more focused modules?**
-  _Cohesion score 0.0696969696969697 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07123034227567067 - nodes in this community are weakly interconnected._

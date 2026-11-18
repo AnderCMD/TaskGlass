@@ -36,6 +36,7 @@ Rules of thumb:
 - Add or update tests for behaviour changes; update `docs/` and `CHANGELOG.md`. Changes to the website live in `site/` and go live when merged into `main`.
 - The native TAP runs inside `explorer.exe`: keep it small, check every HRESULT, never touch XAML objects off the UI thread, and never crash. Test changes on a real machine and mention the Windows build.
 - Never leave the taskbar modified on a failure path: anything that applies an effect must be undone by `Restore`.
+- By contributing you agree that your contribution is licensed under the Apache License 2.0 (see `LICENSE`).
 - Conventional-style commit messages (`feat:`, `fix:`, `docs:`...) are appreciated.
 
 ## Knowledge graph (optional)

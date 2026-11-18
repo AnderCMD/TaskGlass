@@ -2,6 +2,11 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **License**: TaskGlass is now released under the Apache License 2.0 (was MIT). The `NOTICE` file ships in the zip and the installer. Versions up to 1.1.0 stay available under MIT.
+
 ## [1.1.0] - 2026-11-18
 
 ### Added
