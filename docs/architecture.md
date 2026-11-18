@@ -7,14 +7,15 @@ internal/config      schema, defaults, validation, hotkey parsing, atomic save  
 internal/state       pure rule resolution: context -> appearance                  (portable)
 internal/taskbar     applies appearances per taskbar, restores
 internal/events      WinEvent hooks + global hotkey on a dedicated message-loop thread
-internal/theme       reads the Windows light/dark mode
+internal/theme       reads the Windows light/dark mode, themes the tray menu (uxtheme)
 internal/winapi      the only package that calls Win32
 internal/xaml        loads and drives the native TAP inside Explorer
 internal/autostart   HKCU Run key
 native/tap           C source of taskglass_tap.dll (runs inside explorer.exe)
+installer/           Inno Setup script for the per-user installer
 assets/              embedded tray icons; assets/src holds the SVG/HTML sources
 docs/                documentation, config schema, README images
-scripts/             build-tap, gen-resources, render-assets
+scripts/             build-tap, build-installer, gen-resources, render-assets
 tools/genicon        packs rendered PNGs into .ico files
 ```
 
@@ -59,7 +60,7 @@ The Windows 11 taskbar is a XAML island that draws a grey fill (`BackgroundFill`
 4. On this Windows build the initial tree replay does not include the taskbar island, only live changes do. So on any live element (`Add`) the DLL climbs to the root of that element's tree with `VisualTreeHelper.GetParent`, walks it down, and keeps references to `Rectangle`s named `BackgroundFill` / `BackgroundStroke` inside a `TaskbarFrame`. If no natural change happens, TaskGlass shows a tiny off-screen window for 300 ms (`winapi.TaskbarAnchor`) to provoke one.
 5. Opacity is set through `IUIElement::put_Opacity` (vtable slot read from `Windows.UI.Xaml.winmd`). XAML objects are only touched on the UI thread: from the visual tree callback, or via `CoreDispatcher.RunAsync`.
 
-Control channel: the named shared memory `Local\TaskGlass.Xaml.State.v1` holds two int32s, `[0]` mode (TaskGlass to DLL: 0 leave alone, 1 hide) and `[1]` status (DLL to TaskGlass: 1 attached, 2 controlling the fill, negative = failed HRESULT). The DLL polls it every 150 ms and republishes status 2 to every new block, so a restarted TaskGlass learns that an earlier run's DLL is still working. If the block does not exist (TaskGlass exited or crashed) the mode is 0, so the stock taskbar returns by itself, and the DLL additionally clears the accent policy from inside Explorer.
+Control channel: the named shared memory `Local\TaskGlass.Xaml.State.v1` holds eight int32 slots; the two used first are `[0]` mode (TaskGlass to DLL: 0 leave alone, 1 hide) and `[1]` status (DLL to TaskGlass: 1 attached, 2 controlling the fill, negative = failed HRESULT). The DLL polls it every 150 ms and republishes status 2 to every new block, so a restarted TaskGlass learns that an earlier run's DLL is still working. If the block does not exist (TaskGlass exited or crashed) the mode is 0, so the stock taskbar returns by itself, and the DLL additionally clears the accent policy from inside Explorer.
 
 The BSTRs that XAML Diagnostics hands to the visual tree callback are owned by the callback and are freed there. The DLL's log is capped at 1 MiB because it lives inside Explorer.
 
@@ -72,6 +73,14 @@ The same DLL controls one more XAML surface. The shared block has eight int32 sl
 The flyout is a separate XAML island inside Explorer, created the first time the `^` button is opened. It has a `Border` named `OverflowFlyoutBackgroundBorder`. Its tree is not reachable from the taskbar's (both islands live on the same UI thread, but the diagnostics replay only contains one root), so the DLL keeps the last eight live elements it saw as anchors, climbs from each to its tree root and scans every distinct root (the scan runs 250 ms after a burst of events ends, and every 5 s while something wanted is still missing). `IXamlDiagnostics::HitTest` returns `E_INVALIDARG` on this build, so enumerating trees from coordinates is not an option.
 
 If the island already exists when the DLL attaches, no event arrives for it by itself. `winapi.TrayProbe` provokes some: it adds a tray icon to a message-only window and removes it 400 ms later, which makes Explorer build and tear down a tray item and the tray's XAML emit events. The DLL sets slot `[7]` to 1 once it tracks the flyout, and `internal/xaml` stops probing (at most four attempts, six seconds apart, per Explorer process). Same-version restarts of TaskGlass need no probe because the DLL stays loaded and keeps its references.
+
+## Tray menu theme
+
+The tray icon's right-click menu is a Win32 popup menu, which ignores dark mode unless the process opts in. `internal/theme` calls the undocumented `uxtheme` exports `SetPreferredAppMode` (ordinal 135) and `FlushMenuThemes` (136), forcing dark or light according to the Windows *apps* mode, or to the `theme` pinned in the config. The housekeeping tick re-applies it when either changes. If the exports are missing the menu simply keeps the light look.
+
+## Installer and release
+
+`installer/taskglass.iss` builds a per-user (no administrator) Inno Setup installer with English and Spanish pages, optional start with Windows and desktop shortcut; uninstalling restores the taskbar first. Pushing a `v*` tag runs the release workflow, which builds the exe, the DLL and the installer and publishes the zip, `TaskGlass-<version>-Setup.exe` and `SHA256SUMS.txt`.
 
 ## Appearance and assets
 

@@ -15,9 +15,9 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 ## Características
 
 - Estilos **Clear / Blur / Acrylic / Opaque / Normal**, incluida la transparencia total en la barra XAML de Windows 11 (sin relleno gris ni línea de borde)
-- **Modo claro y oscuro**: los colores `auto` y el icono de bandeja siguen a Windows en vivo
+- **Modo claro y oscuro**: los colores `auto`, el icono y el menú de la bandeja siguen a Windows en vivo
 - **Desplegable de la bandeja translúcido**: el desplegable con los iconos ocultos (el botón `^`) tiene su propia opacidad
-- **Reglas inteligentes**: opaca con una ventana maximizada, otro aspecto con el menú Inicio abierto, o por aplicación (`code.exe`, `chrome.exe`, ...)
+- **Reglas inteligentes**: un aspecto opcional con una ventana maximizada, o por aplicación (`code.exe`, `chrome.exe`, ...)
 - **Atajo global** para activar o desactivar el efecto (desactivado por defecto, se activa con un interruptor), e interruptor general
 - **Multimonitor**: cada barra por separado, o solo la principal
 - **Por eventos**: reacciona a eventos de ventana en lugar de sondear, cerca de 0 % de CPU en reposo
