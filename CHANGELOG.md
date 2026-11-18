@@ -10,6 +10,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - Opacity values accept decimals (`99.5`) and are rounded; `null` and out-of-range values are rejected with a clear message.
 
 ### Changed
+- The tray icon's right-click menu follows the Windows light/dark mode (or the `theme` you pin in the config) and switches live.
 - Documented that *Show accent color on Start and taskbar* must be off in Windows, because it overrides the taskbar effect.
 - **Defaults**: the taskbar stays fully transparent with a maximized window too (`maximized.enabled` is now `false`), and the tray flyout keeps 10 % opacity, just enough not to lose the icons.
 - **Removed** the `start_menu` rule. An old config that still has the key keeps loading; the key is ignored and dropped on the next save.

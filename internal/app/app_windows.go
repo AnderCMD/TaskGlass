@@ -45,7 +45,8 @@ type App struct {
 	cfg     config.Config
 	modTime time.Time
 
-	systemLight atomic.Bool // Windows reports a light theme
+	systemLight atomic.Bool  // Windows reports a light theme
+	menuLight   atomic.Int32 // 0 not applied yet, 1 dark, 2 light
 	mgr         *taskbar.Manager
 	xaml        *xaml.Controller // nil when the TAP DLL is unavailable
 	ev          *events.Watcher
@@ -83,6 +84,7 @@ func New(o Options) *App {
 
 // Run blocks until the user quits (tray menu, --quit or a signal).
 func (a *App) Run() {
+	a.applyMenuTheme(a.snapshot())
 	systray.Run(a.onReady, a.onExit)
 	a.shutdown() // Run can return before onExit has finished; wait for the cleanup
 }
@@ -167,6 +169,19 @@ func (a *App) applySideEffects(c config.Config) {
 		}
 	}
 	a.updateTrayIcon(c)
+}
+
+// applyMenuTheme gives the tray icon's right-click menu the light or dark look
+// of Windows (apps mode), or the forced one when the config pins a theme.
+func (a *App) applyMenuTheme(c config.Config) {
+	light := c.Theme.Light(theme.AppsAreLight())
+	v := int32(0)
+	if light {
+		v = 1
+	}
+	if a.menuLight.Swap(v+1) != v+1 {
+		theme.ApplyMenuTheme(light)
+	}
 }
 
 func (a *App) isLight(c config.Config) bool { return c.Theme.Light(a.systemLight.Load()) }
@@ -258,6 +273,7 @@ func (a *App) loop(ctx context.Context) {
 			}
 		case <-housekeeping.C:
 			a.reload()
+			a.applyMenuTheme(a.snapshot())
 			if l := theme.SystemIsLight(); l != a.systemLight.Swap(l) {
 				a.Log.Info("windows theme changed", "light", l)
 				a.updateTrayIcon(a.snapshot())
