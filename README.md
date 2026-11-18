@@ -17,7 +17,7 @@ TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, s
 - **Clear / Blur / Acrylic / Opaque / Normal** styles, including truly transparent on the Windows 11 XAML taskbar (no grey fill, no border line)
 - **Light and dark aware**: `auto` colours and the tray icon follow Windows, live
 - **Smart rules**: opaque when a window is maximized, a different look while the Start menu is open, or per application (`code.exe`, `chrome.exe`, ...)
-- **Global hotkey** to toggle the effect, and a master on/off switch
+- **Global hotkey** to toggle the effect (off by default, one switch to enable), and a master on/off switch
 - **Multi-monitor**: every taskbar handled independently, or only the primary one
 - **Event driven**: reacts to window events instead of polling, about 0 % CPU when idle
 - **Robust**: survives Explorer restarts, restores the taskbar on exit and even after a crash, keeps the previous settings when you break the config file, recovers from internal errors
@@ -46,6 +46,7 @@ A minimal config that makes the bar clear, opaque when something is maximized, a
   "default":   { "accent": "clear" },
   "maximized": { "enabled": true, "accent": "opaque" },
   "apps": [ { "exe": "code.exe", "accent": "blur", "color": "#101828", "opacity": 55 } ],
+  "hotkey_enabled": true,
   "hotkey": "Ctrl+Alt+G"
 }
 ```

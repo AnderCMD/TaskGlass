@@ -176,7 +176,11 @@ type Config struct {
 	Apps []AppRule `json:"apps"`
 	// TrayIcon is the notification-area icon style.
 	TrayIcon TrayIcon `json:"tray_icon"`
-	// Hotkey toggles Enabled globally, e.g. "Ctrl+Alt+G". Empty disables it.
+	// HotkeyEnabled turns the global hotkey on. It is off by default so
+	// TaskGlass never grabs a shortcut you did not ask for.
+	HotkeyEnabled bool `json:"hotkey_enabled"`
+	// Hotkey is the shortcut that toggles Enabled when HotkeyEnabled is true,
+	// e.g. "Ctrl+Alt+G".
 	Hotkey string `json:"hotkey"`
 	// PollMs is the fallback sampling interval. Window events normally trigger
 	// updates instantly; sampling only guards against missed events.
@@ -211,14 +215,16 @@ func Default() Config {
 			Enabled:    false,
 			Appearance: Appearance{Accent: AccentAcrylic, Color: ColorAuto, Opacity: 60},
 		},
-		Apps:       []AppRule{},
-		TrayIcon:   TrayAuto,
-		Hotkey:     "",
-		PollMs:     500,
-		DebounceMs: 25,
-		RefreshMs:  1000,
-		XamlFix:    true,
-		LogLevel:   "info",
+		Apps:     []AppRule{},
+		TrayIcon: TrayAuto,
+		// Off by default: enabling it is one switch, with a sensible shortcut ready.
+		HotkeyEnabled: false,
+		Hotkey:        "Ctrl+Alt+G",
+		PollMs:        500,
+		DebounceMs:    25,
+		RefreshMs:     1000,
+		XamlFix:       true,
+		LogLevel:      "info",
 	}
 }
 
@@ -262,6 +268,8 @@ func (c Config) Validate() error {
 		if _, _, err := ParseHotkey(c.Hotkey); err != nil {
 			return fmt.Errorf("hotkey: %w", err)
 		}
+	} else if c.HotkeyEnabled {
+		return errors.New("hotkey_enabled is true but hotkey is empty")
 	}
 	if c.PollMs < 50 || c.PollMs > 10000 {
 		return fmt.Errorf("poll_ms %d out of range [50, 10000]", c.PollMs)

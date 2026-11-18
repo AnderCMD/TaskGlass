@@ -129,6 +129,41 @@ func TestParsePartialKeepsDefaults(t *testing.T) {
 	}
 }
 
+func TestHotkeyIsOffByDefaultButReadyToEnable(t *testing.T) {
+	d := Default()
+	if d.HotkeyEnabled {
+		t.Fatal("the hotkey must be disabled by default")
+	}
+	if d.Hotkey == "" {
+		t.Fatal("a ready-made shortcut must be preconfigured so enabling is one switch")
+	}
+	if _, _, err := ParseHotkey(d.Hotkey); err != nil {
+		t.Fatalf("default hotkey must be valid: %v", err)
+	}
+	c, err := Parse([]byte(`{"version":1}`))
+	if err != nil || c.HotkeyEnabled {
+		t.Fatalf("a config without the key must keep it off: %+v %v", c, err)
+	}
+	c, err = Parse([]byte(`{"version":1,"hotkey_enabled":true}`))
+	if err != nil || !c.HotkeyEnabled || c.Hotkey != "Ctrl+Alt+G" {
+		t.Fatalf("enabling alone must work with the default shortcut: %+v %v", c, err)
+	}
+}
+
+func TestHotkeyEnabledNeedsAShortcut(t *testing.T) {
+	if _, err := Parse([]byte(`{"version":1,"hotkey_enabled":true,"hotkey":""}`)); err == nil {
+		t.Fatal("hotkey_enabled with an empty hotkey must be rejected")
+	}
+	// disabled with an empty shortcut is fine
+	if _, err := Parse([]byte(`{"version":1,"hotkey_enabled":false,"hotkey":""}`)); err != nil {
+		t.Fatalf("disabled + empty must be accepted: %v", err)
+	}
+	// a bad shortcut is reported even while disabled, so typos surface early
+	if _, err := Parse([]byte(`{"version":1,"hotkey_enabled":false,"hotkey":"G"}`)); err == nil {
+		t.Fatal("an invalid shortcut must be rejected even when disabled")
+	}
+}
+
 func TestExplicitFalseSticks(t *testing.T) {
 	c, err := Parse([]byte(`{"version":1,"enabled":false,"xaml_fix":false}`))
 	if err != nil || c.Enabled || c.XamlFix {
