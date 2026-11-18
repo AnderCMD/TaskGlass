@@ -2,7 +2,7 @@
   "0": "Config",
   "1": "README.md",
   "2": "winapi_windows.go",
-  "3": "multi",
+  "3": "hotkey_enabled",
   "4": "App",
   "5": "Controller",
   "6": "tap.c",
@@ -12,7 +12,7 @@
   "10": "theme",
   "11": "PULL_REQUEST_TEMPLATE.md",
   "12": "main",
-  "13": "main.go",
+  "13": "TaskGlassHookProc",
   "14": "assets.go",
   "15": "bug_report.md",
   "16": "feature_request.md",
@@ -26,10 +26,11 @@
   "24": "debounce_ms",
   "25": "poll_ms",
   "26": "refresh_ms",
-  "27": "hotkey",
+  "27": "version",
   "28": "xaml_fix",
   "29": "autostart_windows.go",
   "30": "start_menu",
   "31": "render-assets.ps1",
-  "32": "gen-resources.ps1"
+  "32": "gen-resources.ps1",
+  "33": "apply-baseline.sh"
 }

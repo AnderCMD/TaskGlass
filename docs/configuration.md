@@ -24,6 +24,7 @@ Changes made from the tray menu are saved to this same file.
     { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
   ],
   "tray_icon": "auto",
+  "hotkey_enabled": false,
   "hotkey": "Ctrl+Alt+G",
   "poll_ms": 500,
   "debounce_ms": 25,
@@ -45,7 +46,8 @@ Changes made from the tray menu are saved to this same file.
 | `start_menu` | rule | Applies while the Start menu or Search has focus. |
 | `apps` | list of app rules | Applies while the named application has focus (max 64, first match wins). |
 | `tray_icon` | `auto`, `color`, `light`, `dark` | Notification-area icon. `auto` is a monochrome glyph that contrasts with the Windows theme; `color` is the full logo. |
-| `hotkey` | string | Global shortcut toggling `enabled`, for example `"Ctrl+Alt+G"`. Needs at least one of `Ctrl`, `Alt`, `Shift`, `Win` and a key `A-Z`, `0-9` or `F1-F24`. Empty (default) disables it. |
+| `hotkey_enabled` | bool | Turns the global hotkey on. **Off by default**, so TaskGlass never grabs a shortcut you did not ask for. Also in the tray menu (**Global hotkey**). |
+| `hotkey` | string | The shortcut that toggles `enabled` while `hotkey_enabled` is `true`. Default `"Ctrl+Alt+G"`. Needs at least one of `Ctrl`, `Alt`, `Shift`, `Win` and a key `A-Z`, `0-9` or `F1-F24`. It is checked even while the hotkey is off, so a typo is reported right away. |
 | `poll_ms` | 50-10000 | Fallback sampling interval. Window events normally trigger updates instantly; this only guards against missed events. |
 | `debounce_ms` | 0-1000 | Coalesces bursts of window events into one update. |
 | `refresh_ms` | 100-60000 | Re-apply the effect this often even if nothing changed, to survive Explorer silently resetting it. |

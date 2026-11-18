@@ -1,16 +1,16 @@
 # Graph Report - TaskGlass  (2026-11-17)
 
 ## Corpus Check
-- 36 files · ~51,045 words
+- 37 files · ~51,727 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 458 nodes · 772 edges · 33 communities (29 shown, 4 thin omitted)
-- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 53 edges (avg confidence: 0.8)
+- 468 nodes · 787 edges · 34 communities (29 shown, 5 thin omitted)
+- Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 57 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `46a8c45e`
+- Built from commit: `95edb79e`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -18,7 +18,7 @@
 - Config
 - README.md
 - winapi_windows.go
-- multi
+- hotkey_enabled
 - App
 - Controller
 - tap.c
@@ -28,7 +28,7 @@
 - theme
 - PULL_REQUEST_TEMPLATE.md
 - main
-- main.go
+- TaskGlassHookProc
 - github.com/AnderCMD/TaskGlass
 - properties
 - Watcher
@@ -38,20 +38,21 @@
 - debounce_ms
 - poll_ms
 - refresh_ms
-- hotkey
+- version
 - xaml_fix
 - autostart_windows.go
 - start_menu
 - render-assets.ps1
+- apply-baseline.sh
 
 ## God Nodes (most connected - your core abstractions)
 1. `App` - 30 edges
 2. `Config` - 22 edges
 3. `Controller` - 15 edges
-4. `Default()` - 13 edges
-5. `logf_()` - 12 edges
-6. `main()` - 11 edges
-7. `Parse()` - 11 edges
+4. `Default()` - 14 edges
+5. `Parse()` - 13 edges
+6. `logf_()` - 12 edges
+7. `main()` - 11 edges
 8. `Context` - 10 edges
 9. `Resolve()` - 10 edges
 10. `on_change()` - 10 edges
@@ -65,17 +66,17 @@
   cmd/taskglass/main_windows.go → internal/config/config.go
 - `main()` --calls--> `Save()`  [INFERRED]
   cmd/taskglass/main_windows.go → internal/config/config.go
-- `main()` --calls--> `Parse()`  [INFERRED]
-  tools/genicon/main.go → internal/config/config.go
+- `watchForQuit()` --references--> `App`  [EXTRACTED]
+  cmd/taskglass/main_windows.go → internal/app/app_windows.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (33 total, 4 thin omitted)
+## Communities (34 total, 5 thin omitted)
 
 ### Community 0 - "Config"
-Cohesion: 0.10
-Nodes (37): Appearance, AppRule, Config, Rule, Taskbars, Theme, TrayIcon, Default() (+29 more)
+Cohesion: 0.08
+Nodes (43): Accent, Appearance, AppRule, Config, Rule, Taskbars, Theme, TrayIcon (+35 more)
 
 ### Community 1 - "README.md"
 Cohesion: 0.05
@@ -83,23 +84,23 @@ Nodes (37): Branching, Contributing, Development, Knowledge graph (optional), Ap
 
 ### Community 2 - "winapi_windows.go"
 Cohesion: 0.12
-Nodes (27): T, TestToPolicy(), HWND, Logger, Time, New(), toPolicy(), className() (+19 more)
+Nodes (29): T, TestToPolicy(), HWND, Logger, Time, New(), toPolicy(), className() (+21 more)
 
-### Community 3 - "multi"
-Cohesion: 0.24
-Nodes (5): Attr, Handler, Level, Record, multi
+### Community 3 - "hotkey_enabled"
+Cohesion: 0.50
+Nodes (4): default, description, type, hotkey_enabled
 
 ### Community 4 - "App"
-Cohesion: 0.10
-Nodes (23): App, menuItems, Options, panicGuard, Accent, check(), Bool, CancelFunc (+15 more)
+Cohesion: 0.11
+Nodes (21): App, menuItems, Options, panicGuard, check(), Bool, CancelFunc, Duration (+13 more)
 
 ### Community 5 - "Controller"
-Cohesion: 0.09
-Nodes (21): Duration, TaskbarAnchor(), Handle, NotifyNull(), SetCallWndProcHook(), Unhook(), WindowThreadPID(), Available() (+13 more)
+Cohesion: 0.08
+Nodes (25): Attr, Handler, Duration, TaskbarAnchor(), Handle, SetCallWndProcHook(), Unhook(), Available() (+17 more)
 
 ### Community 6 - "tap.c"
-Cohesion: 0.07
-Nodes (70): DWORD, HINSTANCE, HRESULT, HSTRING, IClassFactory, IDispatchedHandler_, Inst, InstanceHandle (+62 more)
+Cohesion: 0.08
+Nodes (66): DWORD, HINSTANCE, HRESULT, HSTRING, IClassFactory, IDispatchedHandler_, Inst, InstanceHandle (+58 more)
 
 ### Community 7 - "items"
 Cohesion: 0.07
@@ -110,8 +111,8 @@ Cohesion: 0.07
 Nodes (27): description, enum, type, additionalProperties, type, description, pattern, type (+19 more)
 
 ### Community 9 - "[1.0.0] - 2026-11-17"
-Cohesion: 0.29
-Nodes (6): [1.0.0] - 2026-11-17, Added, Changed, Changelog, Fixed, Known limitations
+Cohesion: 0.22
+Nodes (8): [1.0.0] - 2026-11-17, Added, Changed, Changed, Changelog, Fixed, Known limitations, [Unreleased]
 
 ### Community 10 - "theme"
 Cohesion: 0.16
@@ -121,13 +122,13 @@ Nodes (14): theme, tray_icon, default, description, enum, type, default, descrip
 Cohesion: 0.31
 Nodes (8): attachConsole(), fatal(), Logger, main(), newLogger(), signalQuit(), versionString(), watchForQuit()
 
-### Community 13 - "main.go"
-Cohesion: 0.83
-Nodes (3): entry, main(), writeICO()
+### Community 13 - "TaskGlassHookProc"
+Cohesion: 0.50
+Nodes (4): LPARAM, LRESULT, TaskGlassHookProc(), WPARAM
 
 ### Community 18 - "properties"
-Cohesion: 0.22
-Nodes (9): description, $ref, properties, maximized, $schema, version, type, const (+1 more)
+Cohesion: 0.20
+Nodes (10): default, description, type, description, $ref, properties, hotkey, maximized (+2 more)
 
 ### Community 19 - "Watcher"
 Cohesion: 0.33
@@ -153,9 +154,9 @@ Nodes (6): default, description, maximum, minimum, type, poll_ms
 Cohesion: 0.33
 Nodes (6): refresh_ms, default, description, maximum, minimum, type
 
-### Community 27 - "hotkey"
-Cohesion: 0.50
-Nodes (4): default, description, type, hotkey
+### Community 27 - "version"
+Cohesion: 0.67
+Nodes (3): version, const, description
 
 ### Community 28 - "xaml_fix"
 Cohesion: 0.50
@@ -170,24 +171,24 @@ Cohesion: 0.67
 Nodes (3): start_menu, description, $ref
 
 ## Knowledge Gaps
-- **131 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+126 more)
+- **136 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+131 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **4 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
+- **Why does `properties` connect `properties` to `hotkey_enabled`, `items`, `config.schema.json`, `theme`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `version`, `xaml_fix`, `start_menu`?**
+  _High betweenness centrality (0.067) - this node is a cross-community bridge._
 - **Why does `App` connect `App` to `Config`, `winapi_windows.go`, `Controller`, `main`, `Watcher`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
-- **Why does `properties` connect `properties` to `items`, `config.schema.json`, `theme`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `hotkey`, `xaml_fix`, `start_menu`?**
-  _High betweenness centrality (0.065) - this node is a cross-community bridge._
+  _High betweenness centrality (0.066) - this node is a cross-community bridge._
 - **Why does `Config` connect `Config` to `winapi_windows.go`, `App`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+  _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **What connects `$schema`, `$id`, `title` to the rest of the system?**
-  _131 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _136 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Config` be split into smaller, more focused modules?**
-  _Cohesion score 0.09608843537414966 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08145363408521303 - nodes in this community are weakly interconnected._
 - **Should `README.md` be split into smaller, more focused modules?**
   _Cohesion score 0.05094130675526024 - nodes in this community are weakly interconnected._
 - **Should `winapi_windows.go` be split into smaller, more focused modules?**
-  _Cohesion score 0.125 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11764705882352941 - nodes in this community are weakly interconnected._

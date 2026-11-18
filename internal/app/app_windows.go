@@ -59,9 +59,9 @@ type App struct {
 }
 
 type menuItems struct {
-	enabled, maximized, start, xamlFix, autostart *systray.MenuItem
-	accents                                       map[config.Accent]*systray.MenuItem
-	themes                                        map[config.Theme]*systray.MenuItem
+	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
+	accents                                               map[config.Accent]*systray.MenuItem
+	themes                                                map[config.Theme]*systray.MenuItem
 }
 
 // New creates an App with an already-loaded configuration.
@@ -158,7 +158,8 @@ func (a *App) reload() {
 // applySideEffects handles settings that are more than "what to paint".
 func (a *App) applySideEffects(c config.Config) {
 	if a.ev != nil {
-		if c.Hotkey == "" {
+		// Only grab the shortcut when the user turned it on.
+		if !c.HotkeyEnabled || c.Hotkey == "" {
 			a.ev.SetHotkey(0, 0)
 		} else if mods, vk, err := config.ParseHotkey(c.Hotkey); err == nil {
 			a.ev.SetHotkey(mods, vk)
@@ -360,11 +361,13 @@ func (a *App) syncMenu() {
 	for k, it := range m.themes {
 		check(it, k == c.Theme)
 	}
+	check(m.hotkey, c.HotkeyEnabled)
 	title := "Enabled"
-	if c.Hotkey != "" {
+	if c.HotkeyEnabled && c.Hotkey != "" {
 		title += "\t" + c.Hotkey
 	}
 	m.enabled.SetTitle(title)
+	m.hotkey.SetTitle("Global hotkey (" + c.Hotkey + ")")
 }
 
 func (a *App) buildMenu(ctx context.Context) {
@@ -390,6 +393,7 @@ func (a *App) buildMenu(ctx context.Context) {
 
 	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
 	m.start = systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
+	m.hotkey = systray.AddMenuItemCheckbox("Global hotkey ("+c.Hotkey+")", "Toggle TaskGlass from anywhere; set the keys in the config file", c.HotkeyEnabled)
 	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
 	if a.xaml == nil {
 		m.xamlFix.Disable()
@@ -421,6 +425,7 @@ func (a *App) buildMenu(ctx context.Context) {
 		}
 	}
 	spawn(m.enabled.ClickedCh, flip(m.enabled, func(c *config.Config, on bool) { c.Enabled = on }))
+	spawn(m.hotkey.ClickedCh, flip(m.hotkey, func(c *config.Config, on bool) { c.HotkeyEnabled = on }))
 	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
 	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
 	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))

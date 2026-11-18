@@ -91,10 +91,15 @@
       "default": "auto",
       "description": "Notification-area icon. auto: monochrome glyph that contrasts with the Windows theme."
     },
+    "hotkey_enabled": {
+      "type": "boolean",
+      "default": false,
+      "description": "Turn the global hotkey on. Off by default so TaskGlass never grabs a shortcut you did not ask for."
+    },
     "hotkey": {
       "type": "string",
-      "default": "",
-      "description": "Global shortcut that toggles \"enabled\", e.g. \"Ctrl+Alt+G\". Needs at least one of Ctrl, Alt, Shift, Win and a key A-Z, 0-9 or F1-F24. Empty disables it."
+      "default": "Ctrl+Alt+G",
+      "description": "The shortcut that toggles \"enabled\" while \"hotkey_enabled\" is true, e.g. \"Ctrl+Alt+G\". Needs at least one of Ctrl, Alt, Shift, Win and a key A-Z, 0-9 or F1-F24."
     },
     "poll_ms": { "type": "integer", "minimum": 50, "maximum": 10000, "default": 500, "description": "Fallback sampling interval. Window events normally trigger updates instantly." },
     "debounce_ms": { "type": "integer", "minimum": 0, "maximum": 1000, "default": 25, "description": "Coalesces bursts of window events into one update." },
