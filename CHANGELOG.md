@@ -17,11 +17,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ### Changed
 - GitHub Actions bumped: `checkout` 7, `setup-go` 6, `upload-artifact` 7.
 - The helper DLL finds XAML elements in every tree it has seen an event from, rescans after bursts of events and keeps looking while something wanted is missing.
+- The tray overflow flyout is found even when it already existed before TaskGlass started or before an updated DLL attached: TaskGlass briefly adds and removes a tray icon to make the tray emit the events the DLL needs, and stops as soon as the DLL reports it is tracked.
 - The debug dump (`tap.dump`) can be switched on and off while the DLL is loaded.
 
 ### Known limitations
 - Context menus, notifications, calendar and quick settings are not styled yet.
-- After updating TaskGlass, the tray overflow flyout is only picked up once Explorer restarts if it was already created before the new DLL attached.
 
 ## [1.0.1] - 2026-11-17
 

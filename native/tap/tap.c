@@ -22,6 +22,7 @@
  *   [1] explorer status TAP -> TaskGlass: 0 = pending, 1 = attached, 2 = controlling, <0 = failure HRESULT
  *   [2] tray overflow flyout background   0 = leave alone, else 1 + opacity percent
  *   [3] Start menu surfaces               0 = leave alone, else 1 + opacity percent
+ *   [7] set to 1 by the DLL once the tray overflow flyout is tracked
  *   [5] Start host status (same encoding as [1])
  * Older DLLs only read [0] and [1], so the block stays compatible.
  * plus a manual-reset event "Local\TaskGlass.Xaml.Ready" set once status is
@@ -324,6 +325,8 @@ static DWORD WINAPI poll_thread(LPVOID unused) {
          * shared block) learns about elements found by an earlier run. */
         BOOL controlling = g_is_explorer ? any_tracked(KIND_TASKBAR) : any_tracked(-1);
         if (controlling && g_state_exists && vals[g_status_slot] != 2) publish_slot(g_status_slot, 2);
+        /* slot 7: the tray overflow flyout is tracked (lets TaskGlass stop provoking events) */
+        if (g_host == 1 && g_state_exists && any_tracked(KIND_OVERFLOW) && vals[7] != 1) publish_slot(7, 1);
         (void)last_status;
 
         if (g_state_exists) {
@@ -339,7 +342,7 @@ static DWORD WINAPI poll_thread(LPVOID unused) {
         }
         BOOL changed = FALSE;
         for (int i = 0; i < NVALS; i++) {
-            if (i == 1 || i == 5 || i == 6) continue; /* status slots are ours */
+            if (i == 1 || i == 5 || i == 6 || i == 7) continue; /* status slots are ours */
             if (vals[i] != g_vals[i]) { changed = TRUE; g_vals[i] = vals[i]; }
         }
         /* something is wanted but not found yet: keep looking every 3 s */

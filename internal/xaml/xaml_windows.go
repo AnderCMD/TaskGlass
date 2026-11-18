@@ -51,6 +51,7 @@ const (
 	slotShell    = 4 // TaskGlass -> TAP: notification centre, calendar, quick settings
 	slotStartSt  = 5 // TAP -> TaskGlass: Start host status
 	slotShellSt  = 6 // TAP -> TaskGlass: ShellExperienceHost status
+	slotOvFound  = 7 // TAP -> TaskGlass: 1 once the tray overflow flyout is tracked
 	numSlots     = 8
 )
 
@@ -88,6 +89,10 @@ type target struct {
 
 	pid     uint32 // pid we last attached to
 	failLog string
+
+	probes    int       // tray probes tried for this pid
+	lastProbe time.Time // when the last one ran
+	probedPid uint32
 }
 
 // Controller injects the TAP and drives what it does.
@@ -263,6 +268,7 @@ func (c *Controller) run(ctx context.Context) {
 		for _, tg := range c.targets {
 			c.ensureInjected(ctx, tg)
 		}
+		c.ensureOverflow(ctx)
 		select {
 		case <-ctx.Done():
 			return
@@ -479,5 +485,48 @@ func moduleLoaded(pid uint32, name string) bool {
 func grantAppContainerRead(dir, file string) {
 	for _, p := range []string{dir, file} {
 		_ = exec.Command("icacls", p, "/grant", "*S-1-15-2-1:(RX)").Run()
+	}
+}
+
+// ensureOverflow makes the helper DLL find the tray overflow flyout. The flyout
+// is a XAML island that exists from the first time it is opened; if it was
+// created before the DLL attached, the DLL receives no event for it. Adding and
+// removing a tray icon makes the tray's XAML emit events, which lets the DLL
+// find it. It tries a few times per Explorer process and then gives up (the
+// flyout is then picked up the next time Explorer restarts or its tray changes).
+func (c *Controller) ensureOverflow(ctx context.Context) {
+	if c.load(slotOverflow) == 0 || c.load(slotOvFound) == 1 {
+		return
+	}
+	t := c.targets[0] // explorer
+	c.mu.Lock()
+	pid := t.pid
+	if pid == 0 {
+		c.mu.Unlock()
+		return
+	}
+	if t.probedPid != pid {
+		t.probedPid, t.probes = pid, 0
+	}
+	if t.probes >= 4 || time.Since(t.lastProbe) < 6*time.Second {
+		c.mu.Unlock()
+		return
+	}
+	t.probes++
+	t.lastProbe = time.Now()
+	n := t.probes
+	c.mu.Unlock()
+
+	if err := winapi.TrayProbe(400 * time.Millisecond); err != nil {
+		c.log.Debug("tray probe failed", "err", err)
+		return
+	}
+	c.log.Debug("tray probe sent to wake the overflow flyout", "attempt", n)
+	select {
+	case <-ctx.Done():
+	case <-time.After(1500 * time.Millisecond):
+	}
+	if c.load(slotOvFound) == 1 {
+		c.log.Info("tray overflow flyout is being controlled")
 	}
 }

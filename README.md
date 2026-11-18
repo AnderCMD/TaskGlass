@@ -70,7 +70,6 @@ To remove that fill, `taskglass_tap.dll` is loaded into `explorer.exe` through t
 - This relies on undocumented Windows internals. A Windows update can break it; the app then falls back to accent-only effects (tints and blur still work) and logs why.
 - Loading code into Explorer is what security tools call "injection" and some antivirus products may flag it. The DLL is small and its source is in [native/tap](native/tap); you can build it yourself. Set `"xaml_fix": false` to never touch Explorer.
 - Verified on Windows 11 build 26300 with a single monitor and auto-hide enabled. Windows 10 (no XAML taskbar) only needs the accent API and is untested; so are multi-monitor setups. Please [open an issue](https://github.com/AnderCMD/TaskGlass/issues) with your Windows build if something looks off.
-- After *updating* TaskGlass, the tray overflow flyout may need an Explorer restart to be picked up. Details in [docs/configuration.md](docs/configuration.md#glass-surfaces).
 - If the taskbar ever looks wrong: `taskglass.exe --restore`, or restart Explorer.
 
 ## Roadmap
