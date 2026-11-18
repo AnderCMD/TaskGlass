@@ -30,6 +30,14 @@
         "opacity": { "$ref": "#/definitions/opacity" }
       }
     },
+    "surface": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "opacity": { "$ref": "#/definitions/opacity" }
+      }
+    },
     "rule": {
       "type": "object",
       "additionalProperties": false,
@@ -83,6 +91,16 @@
           "color": { "$ref": "#/definitions/color" },
           "opacity": { "$ref": "#/definitions/opacity" }
         }
+      }
+    },
+    "surfaces": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Shell surfaces whose own background can be made translucent. Each has enabled and opacity (100 = stock look, 0 = no background; File Explorer windows never go below 10).",
+      "properties": {
+        "tray_overflow": { "$ref": "#/definitions/surface", "description": "The flyout that lists hidden tray icons (the ^ button). Needs taskglass_tap.dll and xaml_fix." },
+        "start_menu_flyout": { "$ref": "#/definitions/surface", "description": "The Start menu and its phone panel. Needs taskglass_tap.dll and xaml_fix; loads the helper DLL into StartMenuExperienceHost.exe." },
+        "explorer": { "$ref": "#/definitions/surface", "description": "File Explorer windows, as a uniform window opacity (content included). Needs no DLL." }
       }
     },
     "tray_icon": {

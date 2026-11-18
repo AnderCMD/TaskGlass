@@ -142,6 +142,35 @@ func (a Appearance) RGB(light bool) (r, g, b uint8) {
 	return r, g, b
 }
 
+// Surface controls the background opacity of a shell surface that accent
+// effects cannot reach (a flyout drawn by XAML inside Explorer or the Start
+// menu host). It needs taskglass_tap.dll and xaml_fix.
+type Surface struct {
+	Enabled bool `json:"enabled"`
+	// Opacity of the surface background: 100 is the stock look, 0 removes the
+	// background entirely.
+	Opacity int `json:"opacity"`
+}
+
+// Validate checks a surface.
+func (s Surface) Validate() error {
+	if s.Opacity < 0 || s.Opacity > 100 {
+		return fmt.Errorf("opacity %d out of range [0, 100]", s.Opacity)
+	}
+	return nil
+}
+
+// Surfaces groups the optional shell surfaces.
+type Surfaces struct {
+	// TrayOverflow is the flyout that lists hidden tray icons (the ^ button).
+	TrayOverflow Surface `json:"tray_overflow"`
+	// StartMenu is the Start menu flyout and its phone panel.
+	StartMenu Surface `json:"start_menu_flyout"`
+	// Explorer makes File Explorer windows uniformly translucent (the whole
+	// window, content included). It does not need taskglass_tap.dll.
+	Explorer Surface `json:"explorer"`
+}
+
 // Rule is an Appearance that only applies when Enabled is true.
 type Rule struct {
 	Enabled bool `json:"enabled"`
@@ -174,6 +203,8 @@ type Config struct {
 	StartMenu Rule `json:"start_menu"`
 	// Apps apply while the named application is focused (first match wins).
 	Apps []AppRule `json:"apps"`
+	// Surfaces are shell flyouts whose own background can be made translucent.
+	Surfaces Surfaces `json:"surfaces"`
 	// TrayIcon is the notification-area icon style.
 	TrayIcon TrayIcon `json:"tray_icon"`
 	// HotkeyEnabled turns the global hotkey on. It is off by default so
@@ -215,6 +246,11 @@ func Default() Config {
 			Enabled:    false,
 			Appearance: Appearance{Accent: AccentAcrylic, Color: ColorAuto, Opacity: 60},
 		},
+		Surfaces: Surfaces{
+			TrayOverflow: Surface{Enabled: true, Opacity: 60},
+			StartMenu:    Surface{Enabled: true, Opacity: 60},
+			Explorer:     Surface{Enabled: true, Opacity: 85},
+		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
 		// Off by default: enabling it is one switch, with a sensible shortcut ready.
@@ -254,6 +290,11 @@ func (c Config) Validate() error {
 	for _, k := range checks {
 		if err := k.a.Validate(); err != nil {
 			return fmt.Errorf("%s: %w", k.name, err)
+		}
+	}
+	for name, sf := range map[string]Surface{"tray_overflow": c.Surfaces.TrayOverflow, "start_menu_flyout": c.Surfaces.StartMenu, "explorer": c.Surfaces.Explorer} {
+		if err := sf.Validate(); err != nil {
+			return fmt.Errorf("surfaces.%s: %w", name, err)
 		}
 	}
 	if len(c.Apps) > MaxAppRules {

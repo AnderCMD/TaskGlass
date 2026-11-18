@@ -2,14 +2,24 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [1.0.2] - 2026-11-17
+## [1.1.0] - 2026-11-18
 
 ### Added
-- **Windows installer** (`TaskGlass-<version>-Setup.exe`, Inno Setup): per-user, no administrator rights, English and Spanish, optional start with Windows and desktop shortcut. Uninstalling asks the running TaskGlass to quit, restores the taskbar and offers to delete settings.
-- `scripts/build-installer.ps1`; the release workflow now publishes the installer and checksums for both files.
+- **Windows installer** (`TaskGlass-<version>-Setup.exe`, Inno Setup): per-user, no administrator rights, English and Spanish, optional start with Windows and desktop shortcut. Uninstalling asks the running TaskGlass to quit, restores the taskbar and offers to delete settings. `scripts/build-installer.ps1` builds it; the release workflow publishes it with checksums for both files and CI builds it on every run.
+- **Glass surfaces** (`surfaces` in the config, **Glass surfaces** in the tray menu), each with its own opacity and enabled by default:
+  - `tray_overflow`: the flyout with hidden tray icons.
+  - `start_menu_flyout`: the Start menu and its phone panel (the helper DLL is now also loaded into `StartMenuExperienceHost.exe`, hooked through its UI threads because it owns no window while Start is closed).
+  - `explorer`: File Explorer windows, as a uniform window opacity (title bar, list and navigation pane). No injection; a normal exit and `--restore` give the windows back.
+- The shared-memory block grew to 8 slots (still readable by older DLLs).
 
 ### Changed
 - GitHub Actions bumped: `checkout` 7, `setup-go` 6, `upload-artifact` 7.
+- The helper DLL finds XAML elements in every tree it has seen an event from, rescans after bursts of events and keeps looking while something wanted is missing.
+- The debug dump (`tap.dump`) can be switched on and off while the DLL is loaded.
+
+### Known limitations
+- File Explorer's content is made translucent as a whole; there is no blur behind it.
+- After updating TaskGlass, the tray overflow flyout is only picked up once Explorer restarts if it was already created before the new DLL attached.
 
 ## [1.0.1] - 2026-11-17
 

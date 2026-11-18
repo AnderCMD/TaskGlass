@@ -1,14 +1,16 @@
 //go:build windows
 
-// Package xaml removes the Windows 11 taskbar's own XAML background fill.
+// Package xaml controls XAML surfaces of the Windows 11 shell that accent
+// effects cannot reach.
 //
 // The modern taskbar paints a semi-transparent grey fill over whatever the DWM
-// accent draws, so accent effects alone can never reach "fully transparent".
-// To remove it, TaskGlass loads a small native DLL (native/tap) into
-// explorer.exe through the XAML Diagnostics API. This package gets that DLL
-// loaded into Explorer's taskbar thread with a WH_CALLWNDPROC hook (the DLL then
-// attaches itself to XAML from inside Explorer) and tells it, through a named
-// shared-memory flag, whether to hide the fill.
+// accent draws, and flyouts such as the tray overflow or the Start menu draw
+// their own opaque backgrounds. To change them, TaskGlass loads a small native
+// DLL (native/tap) into the process that owns each surface through the XAML
+// Diagnostics API: explorer.exe (taskbar, tray overflow) and
+// StartMenuExperienceHost.exe (Start menu). This package gets the DLL loaded
+// with a WH_CALLWNDPROC hook (the DLL then attaches itself to XAML from inside
+// the process) and tells it, through named shared memory, what to do.
 //
 // If the DLL is missing or injection fails, TaskGlass keeps working with
 // accent effects only.
@@ -37,32 +39,67 @@ import (
 // DLLName is the TAP library shipped next to taskglass.exe.
 const DLLName = "taskglass_tap.dll"
 
+const stateName = `Local\TaskGlass.Xaml.State.v1`
+
+// Slots of the shared block (8 int32s). Keep in sync with native/tap/tap.c.
 const (
-	stateName = `Local\TaskGlass.Xaml.State.v1` // two int32s: [0] mode, [1] status
-	readyName = `Local\TaskGlass.Xaml.Ready`
+	slotHide     = 0 // TaskGlass -> TAP: 1 hides the taskbar fill
+	slotExplorer = 1 // TAP -> TaskGlass: explorer status (1 attached, 2 controlling, <0 failed)
+	slotOverflow = 2 // TaskGlass -> TAP: tray overflow flyout, see Encode
+	slotStart    = 3 // TaskGlass -> TAP: Start menu surfaces, see Encode
+	slotStartSt  = 5 // TAP -> TaskGlass: Start host status
+	numSlots     = 8
 )
 
-// injectTimeout bounds how long we wait for the DLL to attach inside Explorer
+// Encode converts a surface setting to the shared-memory encoding: 0 leaves
+// the surface alone, otherwise 1 + the opacity percent (0..100).
+func Encode(enabled bool, opacityPercent int) int32 {
+	if !enabled {
+		return 0
+	}
+	if opacityPercent < 0 {
+		opacityPercent = 0
+	}
+	if opacityPercent > 100 {
+		opacityPercent = 100
+	}
+	return int32(1 + opacityPercent)
+}
+
+// injectTimeout bounds how long we wait for the DLL to attach to a process
 // (it retries for up to 30 s while XAML starts up).
 const injectTimeout = 35 * time.Second
 
-// Controller injects the TAP and drives its hide/show flag.
+// target is a process whose XAML tree the TAP is loaded into.
+type target struct {
+	name      string
+	readyName string
+	slot      int // status slot
+	ready     windows.Handle
+	find      func() (hwnd winapi.HWND, tid, pid uint32, ok bool)
+	needed    func(c *Controller) bool
+	hookProc  string // exported name of the hook procedure in the DLL
+	getMsg    bool   // WH_GETMESSAGE on GUI threads instead of WH_CALLWNDPROC on a window
+	threads   func() (pid uint32, tids []uint32, ok bool)
+
+	pid     uint32 // pid we last attached to
+	failLog string
+}
+
+// Controller injects the TAP and drives what it does.
 type Controller struct {
 	log     *slog.Logger
 	dllPath string
 
-	flag   *int32 // shared memory [0], nil until Start succeeds
-	status *int32 // shared memory [1], written by the TAP
-	view   uintptr
-	hmap   windows.Handle
-	ready  windows.Handle
+	vals *[numSlots]int32 // shared memory, nil until Start succeeds
+	view uintptr
+	hmap windows.Handle
 
-	want    atomic.Bool
+	targets []*target
 	mu      sync.Mutex
-	pid     uint32 // explorer pid we last injected into
-	failLog string
 	cancel  context.CancelFunc
 	done    chan struct{}
+	hide    atomic.Bool
 }
 
 // Available reports whether the TAP DLL exists next to the executable and
@@ -75,35 +112,71 @@ func Available(exe string) (string, bool) {
 
 // New creates a Controller for the DLL at dllPath.
 func New(log *slog.Logger, dllPath string) *Controller {
-	return &Controller{log: log, dllPath: dllPath}
+	c := &Controller{log: log, dllPath: dllPath}
+	c.targets = []*target{
+		{
+			name: "explorer", hookProc: "TaskGlassHookProc", readyName: `Local\TaskGlass.Xaml.Ready`, slot: slotExplorer,
+			find: func() (winapi.HWND, uint32, uint32, bool) {
+				bars := winapi.Taskbars()
+				if len(bars) == 0 {
+					return 0, 0, 0, false
+				}
+				tid, pid := winapi.WindowThreadPID(bars[0])
+				return bars[0], tid, pid, tid != 0 && pid != 0
+			},
+			needed: func(c *Controller) bool {
+				return c.hide.Load() || c.load(slotOverflow) != 0
+			},
+		},
+		{
+			name: "start", readyName: `Local\TaskGlass.Xaml.Ready.Start`, slot: slotStartSt,
+			// The Start host owns no window while Start is closed, so hook its UI
+			// thread directly.
+			getMsg: true, hookProc: "TaskGlassGetMsgProc",
+			threads: func() (uint32, []uint32, bool) { return winapi.ProcessGUIThreads("StartMenuExperienceHost.exe") },
+			find: func() (winapi.HWND, uint32, uint32, bool) {
+				pid, tids, ok := winapi.ProcessGUIThreads("StartMenuExperienceHost.exe")
+				if !ok {
+					return 0, 0, 0, false
+				}
+				return 0, tids[0], pid, true
+			},
+			needed: func(c *Controller) bool { return c.load(slotStart) != 0 },
+		},
+	}
+	return c
 }
 
-// Start creates the shared flag and starts the injector loop.
+func (c *Controller) load(slot int) int32     { return atomic.LoadInt32(&c.vals[slot]) }
+func (c *Controller) store(slot int, v int32) { atomic.StoreInt32(&c.vals[slot], v) }
+
+// Start creates the shared block and starts the injector loop.
 func (c *Controller) Start() error {
 	name, _ := windows.UTF16PtrFromString(stateName)
-	h, err := windows.CreateFileMapping(windows.InvalidHandle, nil, windows.PAGE_READWRITE, 0, 8, name)
+	size := uint32(numSlots * 4)
+	h, err := windows.CreateFileMapping(windows.InvalidHandle, nil, windows.PAGE_READWRITE, 0, size, name)
 	if err != nil {
 		return fmt.Errorf("create shared state: %w", err)
 	}
-	view, err := windows.MapViewOfFile(h, windows.FILE_MAP_WRITE, 0, 0, 8)
+	view, err := windows.MapViewOfFile(h, windows.FILE_MAP_WRITE, 0, 0, uintptr(size))
 	if err != nil {
 		windows.CloseHandle(h)
 		return fmt.Errorf("map shared state: %w", err)
 	}
 	c.hmap, c.view = h, view
-	base := *(*unsafe.Pointer)(unsafe.Pointer(&view))
-	c.flag = (*int32)(base)
-	c.status = (*int32)(unsafe.Add(base, 4))
-	atomic.StoreInt32(c.flag, 0)
-	atomic.StoreInt32(c.status, 0)
-	evName, _ := windows.UTF16PtrFromString(readyName)
-	ev, err := windows.CreateEvent(nil, 1, 0, evName) // manual reset
-	if err != nil {
-		windows.UnmapViewOfFile(view)
-		windows.CloseHandle(h)
-		return fmt.Errorf("create ready event: %w", err)
+	c.vals = (*[numSlots]int32)(*(*unsafe.Pointer)(unsafe.Pointer(&view)))
+	for i := range c.vals {
+		c.store(i, 0)
 	}
-	c.ready = ev
+	for _, t := range c.targets {
+		n, _ := windows.UTF16PtrFromString(t.readyName)
+		ev, err := windows.CreateEvent(nil, 1, 0, n) // manual reset
+		if err != nil {
+			c.release()
+			return fmt.Errorf("create ready event: %w", err)
+		}
+		t.ready = ev
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	c.cancel = cancel
@@ -112,33 +185,56 @@ func (c *Controller) Start() error {
 	return nil
 }
 
-// SetHide asks the TAP to hide (true) or restore (false) the XAML fill.
-// Injection only happens the first time hiding is requested.
+// SetHide asks the TAP to hide (true) or restore (false) the taskbar's XAML
+// fill. Injection only happens the first time something needs it.
 func (c *Controller) SetHide(hide bool) {
-	if c.flag == nil {
+	if c.vals == nil {
 		return
 	}
-	c.want.Store(hide)
+	c.hide.Store(hide)
 	v := int32(0)
 	if hide {
 		v = 1
 	}
-	atomic.StoreInt32(c.flag, v)
+	c.store(slotHide, v)
 }
 
-// Stop restores the fill, gives the TAP time to notice, and releases resources.
+// SetSurfaces sets the tray overflow and Start menu surfaces (see Encode).
+func (c *Controller) SetSurfaces(overflow, start int32) {
+	if c.vals == nil {
+		return
+	}
+	c.store(slotOverflow, overflow)
+	c.store(slotStart, start)
+}
+
+// Stop restores everything, gives the TAP time to notice, and releases
+// resources.
 func (c *Controller) Stop() {
-	if c.flag == nil {
+	if c.vals == nil {
 		return
 	}
 	c.SetHide(false)
+	c.SetSurfaces(0, 0)
 	c.cancel()
 	<-c.done
 	time.Sleep(500 * time.Millisecond) // TAP polls every 150 ms, then dispatches to the UI thread
+	c.release()
+}
+
+func (c *Controller) release() {
+	if c.vals == nil {
+		return
+	}
 	windows.UnmapViewOfFile(c.view)
 	windows.CloseHandle(c.hmap) // once gone, the TAP also falls back to "leave alone"
-	windows.CloseHandle(c.ready)
-	c.flag = nil
+	for _, t := range c.targets {
+		if t.ready != 0 {
+			windows.CloseHandle(t.ready)
+			t.ready = 0
+		}
+	}
+	c.vals = nil
 }
 
 func (c *Controller) run(ctx context.Context) {
@@ -146,7 +242,9 @@ func (c *Controller) run(ctx context.Context) {
 	t := time.NewTicker(2 * time.Second)
 	defer t.Stop()
 	for {
-		c.ensureInjected(ctx)
+		for _, tg := range c.targets {
+			c.ensureInjected(ctx, tg)
+		}
 		select {
 		case <-ctx.Done():
 			return
@@ -155,34 +253,35 @@ func (c *Controller) run(ctx context.Context) {
 	}
 }
 
-func (c *Controller) ensureInjected(ctx context.Context) {
-	if !c.want.Load() {
+func (c *Controller) ensureInjected(ctx context.Context, t *target) {
+	if !t.needed(c) {
 		return
 	}
-	bars := winapi.Taskbars()
-	if len(bars) == 0 {
+	hwnd, tid, pid, ok := t.find()
+	if !ok {
 		return
 	}
-	tid, pid := winapi.WindowThreadPID(bars[0])
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if pid == 0 || pid == c.pid {
+	if pid == t.pid {
 		return
 	}
 	path, err := stage(c.dllPath)
 	if err == nil {
-		err = c.inject(ctx, bars[0], tid, pid, path)
+		err = c.inject(ctx, t, hwnd, tid, pid, path)
 	}
 	if err != nil {
-		if msg := err.Error(); msg != c.failLog {
-			c.failLog = msg
-			c.log.Warn("xaml fill removal unavailable (will retry)", "err", err)
+		if msg := err.Error(); msg != t.failLog {
+			t.failLog = msg
+			c.log.Warn("xaml surface control unavailable (will retry)", "target", t.name, "err", err)
 		}
 		return
 	}
-	c.pid, c.failLog = pid, ""
-	c.log.Info("xaml tap attached", "explorer_pid", pid)
-	c.awaitFills(ctx)
+	t.pid, t.failLog = pid, ""
+	c.log.Info("xaml tap attached", "target", t.name, "pid", pid)
+	if t.name == "explorer" && c.hide.Load() {
+		c.awaitFills(ctx)
+	}
 }
 
 // awaitFills waits until the TAP reports it controls the taskbar fill (status
@@ -191,7 +290,7 @@ func (c *Controller) ensureInjected(ctx context.Context) {
 func (c *Controller) awaitFills(ctx context.Context) {
 	for attempt := 0; attempt < 6; attempt++ {
 		for i := 0; i < 6; i++ { // 1.5 s
-			if atomic.LoadInt32(c.status) == 2 {
+			if c.load(slotExplorer) == 2 {
 				c.log.Info("xaml taskbar fill is being controlled")
 				return
 			}
@@ -209,7 +308,7 @@ func (c *Controller) awaitFills(ctx context.Context) {
 }
 
 // stage copies the DLL to a content-addressed path under the user cache so
-// that an updated DLL never collides with a copy Explorer still has loaded.
+// that an updated DLL never collides with a copy a process still has loaded.
 func stage(src string) (string, error) {
 	f, err := os.Open(src)
 	if err != nil {
@@ -252,15 +351,15 @@ func stage(src string) (string, error) {
 	return dst, os.Rename(tmp, dst)
 }
 
-// inject gets the TAP DLL loaded into Explorer's taskbar thread and waits for
+// inject gets the TAP DLL loaded into the thread that owns hwnd and waits for
 // it to report that it attached to XAML.
-func (c *Controller) inject(ctx context.Context, bar winapi.HWND, tid, pid uint32, dllPath string) error {
+func (c *Controller) inject(ctx context.Context, t *target, hwnd winapi.HWND, tid, pid uint32, dllPath string) error {
 	if moduleLoaded(pid, filepath.Base(dllPath)) {
 		// An earlier TaskGlass run attached this exact DLL, or a failed attempt
 		// is still unwinding. Only the TAP can tell: it republishes status 2 to
-		// every new shared block while it controls the fill.
+		// every new shared block while it controls something.
 		for i := 0; i < 12; i++ { // 3 s
-			if atomic.LoadInt32(c.status) == 2 {
+			if c.load(t.slot) == 2 {
 				return nil
 			}
 			select {
@@ -269,37 +368,57 @@ func (c *Controller) inject(ctx context.Context, bar winapi.HWND, tid, pid uint3
 			case <-time.After(250 * time.Millisecond):
 			}
 		}
-		return fmt.Errorf("tap is loaded in Explorer but not controlling the fill yet")
+		return fmt.Errorf("tap is loaded in %s but not controlling anything yet", t.name)
 	}
-	if tid == 0 {
-		return fmt.Errorf("taskbar window has no thread")
-	}
-	windows.ResetEvent(c.ready)
-	atomic.StoreInt32(c.status, 0)
+	windows.ResetEvent(t.ready)
+	c.store(t.slot, 0)
 
 	// Load the DLL here too: the hook needs a module handle and the address of
-	// the hook procedure. Its DllMain does nothing outside explorer.exe.
+	// the hook procedure. Its DllMain does nothing outside the target processes.
 	mod, err := windows.LoadLibrary(dllPath)
 	if err != nil {
 		return fmt.Errorf("load tap: %w", err)
 	}
 	defer windows.FreeLibrary(mod)
-	proc, err := windows.GetProcAddress(mod, "TaskGlassHookProc")
+	proc, err := windows.GetProcAddress(mod, t.hookProc)
 	if err != nil {
-		return fmt.Errorf("tap has no hook procedure: %w", err)
+		return fmt.Errorf("tap has no hook procedure %s: %w", t.hookProc, err)
 	}
-	hook, err := winapi.SetCallWndProcHook(proc, mod, tid)
-	if err != nil {
-		return fmt.Errorf("install hook: %w", err)
+	// The UI thread is not known in advance, so hook every thread that has a
+	// message queue and wake each of them; the DLL is loaded once per process.
+	var hooks []uintptr
+	defer func() {
+		for _, h := range hooks {
+			winapi.Unhook(h)
+		}
+	}()
+	if t.getMsg {
+		_, tids, _ := t.threads()
+		for _, id := range tids {
+			if h, err := winapi.SetGetMessageHook(proc, mod, id); err == nil {
+				hooks = append(hooks, h)
+			}
+		}
+		if len(hooks) == 0 {
+			return fmt.Errorf("install hook: no thread of %s accepted it", t.name)
+		}
+		for _, id := range tids {
+			winapi.PostThreadNull(id)
+		}
+	} else {
+		h, err := winapi.SetCallWndProcHook(proc, mod, tid)
+		if err != nil {
+			return fmt.Errorf("install hook: %w", err)
+		}
+		hooks = append(hooks, h)
+		winapi.NotifyNull(hwnd) // make the hook fire so Windows loads the DLL there
 	}
-	defer winapi.Unhook(hook)
-	winapi.NotifyNull(bar) // make the hook fire so Windows loads the DLL in Explorer
 
 	deadline := time.Now().Add(injectTimeout)
 	for time.Now().Before(deadline) {
-		ev, _ := windows.WaitForSingleObject(c.ready, 250)
+		ev, _ := windows.WaitForSingleObject(t.ready, 250)
 		if ev == windows.WAIT_OBJECT_0 {
-			if st := atomic.LoadInt32(c.status); st != 1 {
+			if st := c.load(t.slot); st != 1 && st != 2 {
 				return fmt.Errorf("tap failed to attach: status 0x%08X (see tap.log)", uint32(st))
 			}
 			return nil

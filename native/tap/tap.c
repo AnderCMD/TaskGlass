@@ -1,11 +1,13 @@
 /*
- * TaskGlass TAP: a tiny XAML Diagnostics "Tool Assembly Provider" that is
- * loaded into explorer.exe via InitializeXamlDiagnosticsEx.
+ * TaskGlass TAP: a tiny XAML Diagnostics "Tool Assembly Provider" loaded into
+ * the shell processes whose XAML we want to change: explorer.exe (taskbar and
+ * tray overflow flyout) and StartMenuExperienceHost.exe (Start menu).
  *
- * Windows 11's taskbar paints its own semi-transparent XAML fill on top of
- * the DWM accent. This DLL finds those fill elements (BackgroundFill /
- * BackgroundStroke) in the taskbar's visual tree and sets their Opacity to 0
- * while TaskGlass asks for it, and back to 1 when it stops.
+ * Windows 11 draws opaque or semi-transparent XAML backgrounds there that the
+ * DWM accent cannot reach. This DLL finds them in the visual tree by name
+ * (BackgroundFill / BackgroundStroke in the TaskbarFrame, the overflow flyout's
+ * OverflowFlyoutBackgroundBorder, the Start menu's AcrylicBorder) and sets
+ * their Opacity while TaskGlass asks for it, and back to 1 when it stops.
  *
  * How it gets loaded (same scheme as TranslucentTB): TaskGlass installs a
  * WH_CALLWNDPROC hook (TaskGlassHookProc) on the taskbar's UI thread, which
@@ -15,9 +17,13 @@
  * TAP and calls SetSite, which creates an Inst below.
  *
  * Control channel: a named shared memory block "Local\TaskGlass.Xaml.State.v1"
- * of two LONGs created by the TaskGlass process:
- *   [0] mode   TaskGlass -> TAP: 0 = leave the taskbar alone, 1 = hide the fill
- *   [1] status TAP -> TaskGlass: 0 = pending, 1 = attached, <0 = failure HRESULT
+ * of 8 LONGs created by the TaskGlass process:
+ *   [0] taskbar fill   TaskGlass -> TAP: 0 = leave alone, 1 = hide the fill
+ *   [1] explorer status TAP -> TaskGlass: 0 = pending, 1 = attached, 2 = controlling, <0 = failure HRESULT
+ *   [2] tray overflow flyout background   0 = leave alone, else 1 + opacity percent
+ *   [3] Start menu surfaces               0 = leave alone, else 1 + opacity percent
+ *   [5] Start host status (same encoding as [1])
+ * Older DLLs only read [0] and [1], so the block stays compatible.
  * plus a manual-reset event "Local\TaskGlass.Xaml.Ready" set once status is
  * final. If the block does not exist (TaskGlass exited or crashed) the mode is
  * 0, so the stock look always comes back by itself.
@@ -32,6 +38,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define COBJMACROS
 #define INITGUID
+#ifndef TAP_BUILD
+#define TAP_BUILD L"dev"
+#endif
 #include <windows.h>
 #include <ocidl.h>
 #include <inspectable.h>
@@ -76,9 +85,12 @@ static const IID IID_IAgileObject_ = {0x94ea2b94, 0xe9cc, 0x49e0, {0xc0, 0xff, 0
 typedef HRESULT(STDMETHODCALLTYPE *PutOpacityFn)(void *self, double v);
 
 #define MAX_TRACKED 32
+enum { KIND_TASKBAR = 0, KIND_OVERFLOW = 1, KIND_START = 2 };
+
 typedef struct {
     InstanceHandle handle;
     void *ui; /* IUIElement*, AddRef'd */
+    int kind;
 } Tracked;
 
 typedef struct Inst Inst;
@@ -92,9 +104,13 @@ struct Inst {
     ICoreDispatcher_ *disp;
     CRITICAL_SECTION cs;
     Tracked tracked[MAX_TRACKED];
-    InstanceHandle scan_anchor; /* newest live element, set by the callback */
+    InstanceHandle anchors[8];  /* recent live elements: each may lead to a different XAML tree */
+    int n_anchors;
+    int next_anchor;
     volatile LONG scan_queued;
     DWORD last_scan;
+    DWORD dirty_since; /* tick of the first unscanned Add event, 0 = none */
+    DWORD dirty_last;  /* tick of the latest Add event */
     Inst *next;
 };
 
@@ -103,9 +119,30 @@ struct Inst {
 static CRITICAL_SECTION g_list_cs;
 static Inst *g_insts;
 static int g_next_id = 1;
-static volatile LONG g_applied_mode;
+#define NVALS 8
+static volatile LONG g_vals[NVALS]; /* last values read from the shared block */
+static int g_status_slot = 1;
+static const wchar_t *g_ready_name = L"Local\\TaskGlass.Xaml.Ready";
+static BOOL g_is_explorer;
 static volatile LONG g_thread_started;
-static BOOL g_dump;
+static BOOL g_dump_cached;
+static DWORD g_dump_checked;
+/* tap.dump can be created or removed while the DLL is loaded: recheck every 2 s */
+static BOOL dump_on(void) {
+    DWORD now = GetTickCount();
+    if (g_dump_checked == 0 || now - g_dump_checked > 2000) {
+        wchar_t dir[MAX_PATH], path[MAX_PATH];
+        DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", dir, MAX_PATH);
+        g_dump_cached = FALSE;
+        if (n > 0 && n < MAX_PATH) {
+            _snwprintf(path, MAX_PATH, L"%ls\\TaskGlass\\tap.dump", dir);
+            g_dump_cached = GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
+        }
+        g_dump_checked = now ? now : 1;
+    }
+    return g_dump_cached;
+}
+#define g_dump dump_on()
 
 /* ---------------------------------------------------------------- logging */
 static void logf_(const wchar_t *fmt, ...) {
@@ -140,31 +177,42 @@ static void logf_(const wchar_t *fmt, ...) {
 /* ------------------------------------------------------------ shared state */
 static BOOL g_state_exists; /* last poll found TaskGlass's shared block */
 
-static LONG read_mode(void) {
+/* Reads the whole block into vals; a missing block reads as all zeros. */
+static void read_state(LONG *vals) {
+    for (int i = 0; i < NVALS; i++) vals[i] = 0;
     HANDLE m = OpenFileMappingW(FILE_MAP_READ, FALSE, L"Local\\TaskGlass.Xaml.State.v1");
     g_state_exists = m != NULL;
-    if (!m) return 0;
-    LONG v = 0;
-    LONG *p = (LONG *)MapViewOfFile(m, FILE_MAP_READ, 0, 0, sizeof(LONG));
+    if (!m) return;
+    LONG *p = (LONG *)MapViewOfFile(m, FILE_MAP_READ, 0, 0, sizeof(LONG) * 2);
     if (p) {
-        v = *p;
+        vals[0] = p[0];
+        vals[1] = p[1];
         UnmapViewOfFile(p);
     }
+    /* the extra slots exist only in blocks made by newer TaskGlass versions */
+    LONG *q = (LONG *)MapViewOfFile(m, FILE_MAP_READ, 0, 0, sizeof(LONG) * NVALS);
+    if (q) {
+        for (int i = 2; i < NVALS; i++) vals[i] = q[i];
+        UnmapViewOfFile(q);
+    }
     CloseHandle(m);
-    return v;
 }
 
-static void publish_status(LONG status) {
+static void publish_slot(int slot, LONG status) {
     HANDLE m = OpenFileMappingW(FILE_MAP_WRITE, FALSE, L"Local\\TaskGlass.Xaml.State.v1");
     if (m) {
-        LONG *p = (LONG *)MapViewOfFile(m, FILE_MAP_WRITE, 0, 0, 2 * sizeof(LONG));
+        LONG *p = (LONG *)MapViewOfFile(m, FILE_MAP_WRITE, 0, 0, sizeof(LONG) * (slot + 1));
         if (p) {
-            p[1] = status;
+            p[slot] = status;
             UnmapViewOfFile(p);
         }
         CloseHandle(m);
     }
-    HANDLE e = OpenEventW(EVENT_MODIFY_STATE, FALSE, L"Local\\TaskGlass.Xaml.Ready");
+}
+
+static void publish_status(LONG status) {
+    publish_slot(g_status_slot, status);
+    HANDLE e = OpenEventW(EVENT_MODIFY_STATE, FALSE, g_ready_name);
     if (e) {
         SetEvent(e);
         CloseHandle(e);
@@ -177,11 +225,24 @@ static void set_opacity(Inst *in, void *ui, double v) {
     if (FAILED(hr)) logf_(L"[%d] put_Opacity failed: 0x%08lx", in->id, (unsigned long)hr);
 }
 
+/* Opacity that a surface kind should have for the current shared values. */
+static double wanted_opacity(int kind) {
+    LONG v;
+    switch (kind) {
+    case KIND_TASKBAR: return g_vals[0] ? 0.0 : 1.0;
+    case KIND_OVERFLOW: v = g_vals[2]; break;
+    default: v = g_vals[3]; break;
+    }
+    if (v <= 0) return 1.0; /* leave alone */
+    if (v > 101) v = 101;
+    return (double)(v - 1) / 100.0;
+}
+
 /* Runs on the instance's UI thread. */
-static void apply_all(Inst *in, LONG mode) {
+static void apply_all(Inst *in) {
     EnterCriticalSection(&in->cs);
     for (int i = 0; i < MAX_TRACKED; i++)
-        if (in->tracked[i].ui) set_opacity(in, in->tracked[i].ui, mode ? 0.0 : 1.0);
+        if (in->tracked[i].ui) set_opacity(in, in->tracked[i].ui, wanted_opacity(in->tracked[i].kind));
     LeaveCriticalSection(&in->cs);
 }
 
@@ -197,11 +258,11 @@ static HRESULT STDMETHODCALLTYPE H_QI(IDispatchedHandler_ *self, REFIID riid, vo
 }
 static ULONG STDMETHODCALLTYPE H_AddRef(IDispatchedHandler_ *self) { (void)self; return 2; }
 static ULONG STDMETHODCALLTYPE H_Release(IDispatchedHandler_ *self) { (void)self; return 1; }
-static void scan_from(Inst *in, InstanceHandle anchor);
+static void scan_all(Inst *in);
 static HRESULT STDMETHODCALLTYPE H_Invoke(IDispatchedHandler_ *self) {
     Inst *in = INST_FROM(self, handler);
-    if (InterlockedExchange(&in->scan_queued, 0) && in->scan_anchor) scan_from(in, in->scan_anchor);
-    apply_all(in, g_applied_mode);
+    if (InterlockedExchange(&in->scan_queued, 0)) scan_all(in);
+    apply_all(in);
     return S_OK;
 }
 static const IDispatchedHandlerVtbl_ g_handler_vtbl = {H_QI, H_AddRef, H_Release, H_Invoke};
@@ -237,54 +298,75 @@ static void clear_all_accents(void) {
     while ((h = FindWindowExW(NULL, h, L"Shell_SecondaryTrayWnd", NULL)) != NULL) clear_accent(h);
 }
 
-static BOOL any_tracked(void) {
+/* Is anything of this kind tracked (kind < 0: anything at all)? */
+static BOOL any_tracked(int kind) {
     BOOL any = FALSE;
     EnterCriticalSection(&g_list_cs);
     for (Inst *in = g_insts; in && !any; in = in->next)
         for (int i = 0; i < MAX_TRACKED; i++)
-            if (in->tracked[i].ui) { any = TRUE; break; }
+            if (in->tracked[i].ui && (kind < 0 || in->tracked[i].kind == kind)) { any = TRUE; break; }
     LeaveCriticalSection(&g_list_cs);
     return any;
 }
 
-/* status 2 = "controlling the taskbar fill"; republished every poll so a new
- * TaskGlass process (new shared block) learns about fills found by an earlier one. */
-static void publish_filled(void) {
-    HANDLE m = OpenFileMappingW(FILE_MAP_WRITE, FALSE, L"Local\\TaskGlass.Xaml.State.v1");
-    if (!m) return;
-    LONG *p = (LONG *)MapViewOfFile(m, FILE_MAP_WRITE, 0, 0, 2 * sizeof(LONG));
-    if (p) {
-        if (p[1] != 2) p[1] = 2;
-        UnmapViewOfFile(p);
-    }
-    CloseHandle(m);
-}
+static void scan_all(Inst *in);
 
 static DWORD WINAPI poll_thread(LPVOID unused) {
     (void)unused;
     BOOL was_alive = FALSE;
+    LONG last_status = -1;
     for (;;) {
-        if (any_tracked()) publish_filled();
-        LONG m = read_mode();
+        LONG vals[NVALS];
+        read_state(vals);
+        /* status 2 = "controlling": republished so a restarted TaskGlass (new
+         * shared block) learns about elements found by an earlier run. */
+        BOOL controlling = g_is_explorer ? any_tracked(KIND_TASKBAR) : any_tracked(-1);
+        if (controlling && g_state_exists && vals[g_status_slot] != 2) publish_slot(g_status_slot, 2);
+        (void)last_status;
+
         if (g_state_exists) {
             was_alive = TRUE;
         } else if (was_alive) {
             was_alive = FALSE;
-            logf_(L"TaskGlass is gone: clearing the taskbar accent");
-            clear_all_accents();
+            if (g_is_explorer) {
+                logf_(L"TaskGlass is gone: clearing the taskbar accent");
+                clear_all_accents();
+            } else {
+                logf_(L"TaskGlass is gone: restoring surfaces");
+            }
         }
-        if (m != g_applied_mode) {
-            g_applied_mode = m;
-            logf_(L"mode -> %ld", (long)m);
-            EnterCriticalSection(&g_list_cs);
-            for (Inst *in = g_insts; in; in = in->next) dispatch_apply(in);
-            LeaveCriticalSection(&g_list_cs);
+        BOOL changed = FALSE;
+        for (int i = 0; i < NVALS; i++) {
+            if (i == 1 || i == 5) continue; /* status slots are ours */
+            if (vals[i] != g_vals[i]) { changed = TRUE; g_vals[i] = vals[i]; }
         }
+        /* something is wanted but not found yet: keep looking every 3 s */
+        BOOL missing = g_is_explorer ? (g_vals[2] && !any_tracked(KIND_OVERFLOW)) : (g_vals[3] && !any_tracked(KIND_START));
+        EnterCriticalSection(&g_list_cs);
+        DWORD now = GetTickCount();
+        for (Inst *in = g_insts; in; in = in->next) {
+            /* trailing scan: wait for a quiet moment after tree changes (a flyout
+             * is built over several events), but never longer than 2 s. */
+            if (in->dirty_since && (now - in->dirty_last >= 250 || now - in->dirty_since >= 2000) &&
+                now - in->last_scan >= 800 && !in->scan_queued) {
+                in->dirty_since = 0;
+                in->last_scan = now;
+                in->scan_queued = 1;
+                dispatch_apply(in);
+            } else if (missing && in->n_anchors && now - in->last_scan >= 5000 && !in->scan_queued) {
+                in->last_scan = now;
+                in->scan_queued = 1;
+                dispatch_apply(in);
+            } else if (changed) {
+                dispatch_apply(in);
+            }
+        }
+        LeaveCriticalSection(&g_list_cs);
+        if (changed) logf_(L"values -> %ld %ld %ld %ld", (long)g_vals[0], (long)g_vals[2], (long)g_vals[3], (long)g_vals[4]);
         Sleep(150);
     }
     return 0;
 }
-
 
 /* ------------------------------------------------ tracking and scanning */
 static BOOL hs_eq(HSTRING h, const wchar_t *w) {
@@ -294,7 +376,7 @@ static BOOL hs_eq(HSTRING h, const wchar_t *w) {
 }
 
 /* Keeps a reference to a taskbar fill. Takes ownership of `ui`. UI thread. */
-static BOOL track(Inst *in, InstanceHandle handle, void *ui, const wchar_t *what) {
+static BOOL track(Inst *in, InstanceHandle handle, void *ui, int kind, const wchar_t *what) {
     BOOL stored = FALSE, dup = FALSE;
     EnterCriticalSection(&in->cs);
     int slot = -1;
@@ -305,6 +387,7 @@ static BOOL track(Inst *in, InstanceHandle handle, void *ui, const wchar_t *what
     if (!dup && slot >= 0) {
         in->tracked[slot].handle = handle;
         in->tracked[slot].ui = ui;
+        in->tracked[slot].kind = kind;
         stored = TRUE;
     }
     LeaveCriticalSection(&in->cs);
@@ -314,9 +397,13 @@ static BOOL track(Inst *in, InstanceHandle handle, void *ui, const wchar_t *what
         return FALSE;
     }
     logf_(L"[%d] tracking %ls handle=%llu", in->id, what, (unsigned long long)handle);
-    if (g_applied_mode) set_opacity(in, ui, 0.0);
+    set_opacity(in, ui, wanted_opacity(kind));
     return TRUE;
 }
+
+/* Start menu: element names are filled in from tap.dump output of
+ * StartMenuExperienceHost; see start_kind below. */
+static int start_kind(HSTRING name, const wchar_t **what, const wchar_t **cls);
 
 typedef struct {
     Inst *in;
@@ -344,18 +431,26 @@ static void scan_node(Scan *sc, void *dep, int depth, BOOL in_frame) {
     }
     BOOL frame = in_frame || hs_eq(name, L"TaskbarFrame");
     BOOL fill = hs_eq(name, L"BackgroundFill"), stroke = hs_eq(name, L"BackgroundStroke");
+    int kind = -1;
+    const wchar_t *what = NULL;
+    const wchar_t *want_class = NULL;
+    if (g_is_explorer) {
+        if (frame && (fill || stroke)) { kind = KIND_TASKBAR; what = fill ? L"BackgroundFill" : L"BackgroundStroke"; want_class = L"Windows.UI.Xaml.Shapes.Rectangle"; }
+        else if (hs_eq(name, L"OverflowFlyoutBackgroundBorder")) { kind = KIND_OVERFLOW; what = L"OverflowFlyoutBackgroundBorder"; want_class = L"Windows.UI.Xaml.Controls.Border"; }
+    } else {
+        kind = start_kind(name, &what, &want_class);
+    }
     if (name) WindowsDeleteString(name);
 
-    if (frame && (fill || stroke)) {
+    if (kind >= 0) {
         HSTRING cls = NULL;
-        BOOL is_rect = SUCCEEDED(IInspectable_GetRuntimeClassName((IInspectable *)dep, &cls)) &&
-                       hs_eq(cls, L"Windows.UI.Xaml.Shapes.Rectangle");
+        BOOL ok_class = SUCCEEDED(IInspectable_GetRuntimeClassName((IInspectable *)dep, &cls)) && hs_eq(cls, want_class);
         if (cls) WindowsDeleteString(cls);
         InstanceHandle h = 0;
         void *ui = NULL;
-        if (is_rect && SUCCEEDED(IXamlDiagnostics_GetHandleFromIInspectable(sc->in->diag, (IInspectable *)dep, &h)) &&
+        if (ok_class && SUCCEEDED(IXamlDiagnostics_GetHandleFromIInspectable(sc->in->diag, (IInspectable *)dep, &h)) &&
             SUCCEEDED(IUnknown_QueryInterface((IUnknown *)dep, &IID_IUIElement_, &ui)) && ui) {
-            if (track(sc->in, h, ui, fill ? L"BackgroundFill" : L"BackgroundStroke")) sc->found++;
+            if (track(sc->in, h, ui, kind, what)) sc->found++;
         }
     }
 
@@ -370,46 +465,66 @@ static void scan_node(Scan *sc, void *dep, int depth, BOOL in_frame) {
     }
 }
 
-/* From any live element: climb to the root of its XAML tree, then search the
- * whole tree for the taskbar fills. Runs on the UI thread. */
-static void scan_from(Inst *in, InstanceHandle anchor) {
+/* Climbs from one live element to the root of its XAML tree. Returns the root
+ * (AddRef'd) or NULL. */
+static void *root_of(Inst *in, void *statics, InstanceHandle anchor) {
     IInspectable *obj = NULL;
-    if (FAILED(IXamlDiagnostics_GetIInspectableFromHandle(in->diag, anchor, &obj)) || !obj) return;
+    if (FAILED(IXamlDiagnostics_GetIInspectableFromHandle(in->diag, anchor, &obj)) || !obj) return NULL;
     void *cur = NULL;
     HRESULT hr = IInspectable_QueryInterface(obj, &IID_IDependencyObject_, &cur);
     IInspectable_Release(obj);
-    if (FAILED(hr) || !cur) return;
-
-    HSTRING cn = NULL;
-    WindowsCreateString(L"Windows.UI.Xaml.Media.VisualTreeHelper", 38, &cn);
-    void *statics = NULL;
-    hr = RoGetActivationFactory(cn, &IID_IVisualTreeHelperStatics_, &statics);
-    WindowsDeleteString(cn);
-    if (FAILED(hr) || !statics) {
-        logf_(L"[%d] VisualTreeHelper unavailable: 0x%08lx", in->id, (unsigned long)hr);
-        IUnknown_Release((IUnknown *)cur);
-        return;
-    }
-
+    if (FAILED(hr) || !cur) return NULL;
     for (int up = 0; up < 200; up++) {
         void *parent = NULL;
         if (FAILED(((GetParentFn)VT(statics)[SLOT_VTH_GETPARENT])(statics, cur, &parent)) || !parent) break;
         IUnknown_Release((IUnknown *)cur);
         cur = parent;
     }
-    Scan sc = {in, statics, 0, 0};
-    scan_node(&sc, cur, 0, FALSE);
-    logf_(L"[%d] scan: %d nodes, %d fill element(s) found", in->id, sc.nodes, sc.found);
-    if (sc.found) publish_status(2);
-    IUnknown_Release((IUnknown *)cur);
+    return cur;
+}
+
+/* Scans the XAML tree of every recent anchor (each distinct root once) for the
+ * elements we control. Runs on the UI thread. */
+static void scan_all(Inst *in) {
+    HSTRING cn = NULL;
+    WindowsCreateString(L"Windows.UI.Xaml.Media.VisualTreeHelper", 38, &cn);
+    void *statics = NULL;
+    HRESULT hr = RoGetActivationFactory(cn, &IID_IVisualTreeHelperStatics_, &statics);
+    WindowsDeleteString(cn);
+    if (FAILED(hr) || !statics) {
+        logf_(L"[%d] VisualTreeHelper unavailable: 0x%08lx", in->id, (unsigned long)hr);
+        return;
+    }
+    InstanceHandle anchors[8];
+    int n;
+    EnterCriticalSection(&g_list_cs);
+    n = in->n_anchors;
+    for (int i = 0; i < n; i++) anchors[i] = in->anchors[i];
+    LeaveCriticalSection(&g_list_cs);
+
+    void *roots[8];
+    int nroots = 0, found = 0, nodes = 0;
+    for (int i = 0; i < n; i++) {
+        void *root = root_of(in, statics, anchors[i]);
+        if (!root) continue;
+        BOOL dup = FALSE;
+        for (int j = 0; j < nroots; j++) if (roots[j] == root) dup = TRUE; /* COM identity of the same object */
+        if (dup) { IUnknown_Release((IUnknown *)root); continue; }
+        roots[nroots++] = root;
+        Scan sc = {in, statics, 0, 0};
+        scan_node(&sc, root, 0, FALSE);
+        nodes += sc.nodes;
+        found += sc.found;
+    }
+    for (int j = 0; j < nroots; j++) IUnknown_Release((IUnknown *)roots[j]);
+    if (found || g_dump) /* a failed scan repeats every few seconds: keep the log quiet */
+        logf_(L"[%d] scan: %d anchor(s), %d tree(s), %d nodes, %d element(s) found", in->id, n, nroots, nodes, found);
+    if (found && g_is_explorer) publish_slot(1, 2);
+    else if (found) publish_slot(g_status_slot, 2);
     IUnknown_Release((IUnknown *)statics);
 }
 
 /* ---------------------------------------- IVisualTreeServiceCallback */
-static BOOL wants(const wchar_t *name) {
-    return name && (wcscmp(name, L"BackgroundFill") == 0 || wcscmp(name, L"BackgroundStroke") == 0);
-}
-
 static HRESULT STDMETHODCALLTYPE C_QI(IVisualTreeServiceCallback *self, REFIID riid, void **out) {
     if (IsEqualIID(riid, &IID_IUnknown) || IsEqualIID(riid, &IID_IVisualTreeServiceCallback)) {
         *out = self;
@@ -429,16 +544,21 @@ static HRESULT on_change(IVisualTreeServiceCallback *self, ParentChildRelation r
               (unsigned long long)rel.Parent, (unsigned long long)el.Handle, el.Type ? el.Type : L"?",
               el.Name ? el.Name : L"", el.NumChildren);
 
-    if (type == Add && wants(el.Name) && el.Type && wcscmp(el.Type, L"Windows.UI.Xaml.Shapes.Rectangle") == 0 && in->diag) {
-        /* a fill appearing live: only keep it if it sits inside a TaskbarFrame,
-         * which the scan verifies; just queue a scan from here. */
-        in->scan_anchor = el.Handle;
-        if (!InterlockedExchange(&in->scan_queued, 1)) dispatch_apply(in);
-    } else if (type == Add && rel.Parent != 0 && in->diag && GetTickCount() - in->last_scan > 1500) {
-        /* any other live element works as an anchor to find the taskbar tree */
-        in->last_scan = GetTickCount();
-        in->scan_anchor = el.Handle;
-        if (!InterlockedExchange(&in->scan_queued, 1)) dispatch_apply(in);
+    if (type == Add && in->diag && el.Handle) {
+        /* Any live element is an anchor to find the whole tree; the poll thread
+         * scans once the burst of events is over. */
+        DWORD now = GetTickCount();
+        EnterCriticalSection(&g_list_cs);
+        BOOL known = FALSE;
+        for (int i = 0; i < in->n_anchors; i++) if (in->anchors[i] == el.Handle) known = TRUE;
+        if (!known) {
+            in->anchors[in->next_anchor] = el.Handle;
+            in->next_anchor = (in->next_anchor + 1) % 8;
+            if (in->n_anchors < 8) in->n_anchors++;
+        }
+        if (!in->dirty_since) in->dirty_since = now;
+        in->dirty_last = now;
+        LeaveCriticalSection(&g_list_cs);
     } else if (type == Remove) {
         EnterCriticalSection(&in->cs);
         for (int i = 0; i < MAX_TRACKED; i++)
@@ -481,7 +601,7 @@ static HRESULT STDMETHODCALLTYPE T_GetSite(IObjectWithSite *self, REFIID riid, v
 static DWORD WINAPI advise_thread(LPVOID arg) {
     Inst *in = (Inst *)arg;
     HRESULT hr = IVisualTreeService_AdviseVisualTreeChange(in->vts, (IVisualTreeServiceCallback *)&in->cb);
-    logf_(L"[%d] TAP attached, advise=0x%08lx dump=%d", in->id, (unsigned long)hr, (int)g_dump);
+    logf_(L"[%d] TAP attached, advise=0x%08lx dump=%d build=" TAP_BUILD, in->id, (unsigned long)hr, (int)g_dump);
     publish_status(SUCCEEDED(hr) ? 1 : (LONG)hr);
     return 0;
 }
@@ -509,7 +629,7 @@ static HRESULT STDMETHODCALLTYPE T_SetSite(IObjectWithSite *self, IUnknown *site
     g_insts = in;
     LeaveCriticalSection(&g_list_cs);
 
-    g_applied_mode = read_mode();
+    read_state((LONG *)g_vals);
     if (InterlockedCompareExchange(&g_thread_started, 1, 0) == 0) {
         HANDLE th = CreateThread(NULL, 0, poll_thread, NULL, 0, NULL);
         if (th) CloseHandle(th);
@@ -567,6 +687,8 @@ static HINSTANCE g_inst;
 /* Hook procedure: its only job is to make Windows load this DLL into the
  * thread that owns the taskbar window. */
 LRESULT CALLBACK TaskGlassHookProc(int code, WPARAM w, LPARAM l) { return CallNextHookEx(NULL, code, w, l); }
+/* Same, for a WH_GETMESSAGE hook on a thread that owns no window. */
+LRESULT CALLBACK TaskGlassGetMsgProc(int code, WPARAM w, LPARAM l) { return CallNextHookEx(NULL, code, w, l); }
 
 typedef HRESULT(WINAPI *InitXamlDiagFn)(PCWSTR, DWORD, PCWSTR, PCWSTR, CLSID, PCWSTR);
 typedef struct {
@@ -631,11 +753,15 @@ static DWORD WINAPI install_thread(LPVOID unused) {
     return 0;
 }
 
-static BOOL host_is_explorer(void) {
+/* Which process are we loaded into? 1 = explorer, 2 = Start menu host, 0 = other. */
+static int host_kind(void) {
     wchar_t exe[MAX_PATH];
-    if (!GetModuleFileNameW(NULL, exe, MAX_PATH)) return FALSE;
+    if (!GetModuleFileNameW(NULL, exe, MAX_PATH)) return 0;
     const wchar_t *base = wcsrchr(exe, L'\\');
-    return base && _wcsicmp(base + 1, L"explorer.exe") == 0;
+    if (!base) return 0;
+    if (_wcsicmp(base + 1, L"explorer.exe") == 0) return 1;
+    if (_wcsicmp(base + 1, L"StartMenuExperienceHost.exe") == 0) return 2;
+    return 0;
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
@@ -644,18 +770,31 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
         g_inst = inst;
         DisableThreadLibraryCalls(inst);
         InitializeCriticalSection(&g_list_cs);
-        wchar_t dir[MAX_PATH], path[MAX_PATH];
-        DWORD n = GetEnvironmentVariableW(L"LOCALAPPDATA", dir, MAX_PATH);
-        if (n > 0 && n < MAX_PATH) {
-            _snwprintf(path, MAX_PATH, L"%ls\\TaskGlass\\tap.dump", dir);
-            g_dump = GetFileAttributesW(path) != INVALID_FILE_ATTRIBUTES;
-        }
         /* The TaskGlass process also loads this DLL to get the hook procedure's
          * address; only start the installer inside Explorer itself. */
-        if (host_is_explorer()) {
+        int host = host_kind();
+        g_is_explorer = host == 1;
+        if (host == 2) {
+            g_status_slot = 5;
+            g_ready_name = L"Local\\TaskGlass.Xaml.Ready.Start";
+        }
+        if (host != 0) {
             HANDLE t = CreateThread(NULL, 0, install_thread, NULL, 0, NULL);
             if (t) CloseHandle(t);
         }
     }
     return TRUE;
+}
+
+/* Start menu surfaces (StartMenuExperienceHost). The names come from a
+ * tap.dump of the real process on Windows 11 build 26300: the main menu and
+ * the phone companion panel each have a Border "AcrylicBorder" whose child
+ * "AcrylicOverlay" tints it. Hiding the parent fades both. */
+static int start_kind(HSTRING name, const wchar_t **what, const wchar_t **cls) {
+    if (hs_eq(name, L"AcrylicBorder")) {
+        *what = L"AcrylicBorder";
+        *cls = L"Windows.UI.Xaml.Controls.Border";
+        return KIND_START;
+    }
+    return -1;
 }

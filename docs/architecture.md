@@ -9,9 +9,10 @@ internal/taskbar     applies appearances per taskbar, restores
 internal/events      WinEvent hooks + global hotkey on a dedicated message-loop thread
 internal/theme       reads the Windows light/dark mode
 internal/winapi      the only package that calls Win32
-internal/xaml        loads and drives the native TAP inside Explorer
+internal/xaml        loads and drives the native TAP inside Explorer and the Start host
+internal/winglass    uniform opacity for File Explorer windows (layered window alpha)
 internal/autostart   HKCU Run key
-native/tap           C source of taskglass_tap.dll (runs inside explorer.exe)
+native/tap           C source of taskglass_tap.dll (runs inside explorer.exe and StartMenuExperienceHost.exe)
 assets/              embedded tray icons; assets/src holds the SVG/HTML sources
 docs/                documentation, config schema, README images
 scripts/             build-tap, gen-resources, render-assets
@@ -65,6 +66,16 @@ Control channel: the named shared memory `Local\TaskGlass.Xaml.State.v1` holds t
 The BSTRs that XAML Diagnostics hands to the visual tree callback are owned by the callback and are freed there. The DLL's log is capped at 1 MiB because it lives inside Explorer.
 
 Debugging: create an empty `%LOCALAPPDATA%\TaskGlass\tap.dump` *before* the DLL is loaded and `tap.log` in the same folder records every visual tree change and scan. The DLL stays loaded until Explorer restarts.
+
+## Other shell surfaces
+
+The same DLL controls two more XAML surfaces. The shared block has eight int32 slots: `[0]` taskbar fill, `[1]` Explorer status, `[2]` tray overflow flyout, `[3]` Start menu, `[5]` Start host status. Surface slots hold `0` (leave alone) or `1 + opacity percent`; the DLL applies `opacity / 100` to the elements it tracks for that surface and `1.0` when told to leave them alone or when the block disappears. Older DLLs read only slots 0 and 1, so the block stays compatible.
+
+**Tray overflow flyout.** It is a separate XAML island inside Explorer that is created the first time the `^` button is opened. It has a `Border` named `OverflowFlyoutBackgroundBorder`. Its tree is not reachable from the taskbar's, so the DLL keeps the last eight live elements it saw as anchors, climbs from each to its tree root and scans every distinct root (the scan runs 250 ms after a burst of events ends, and every 5 s while something wanted is still missing). `IXamlDiagnostics::HitTest` returns `E_INVALIDARG` on this build, so enumerating trees from coordinates is not an option. Consequence: if the island already exists when a *new* DLL (an updated TaskGlass) attaches, no event arrives and the flyout is only found after Explorer restarts. Same-version restarts of TaskGlass are fine because the DLL stays loaded and keeps its references.
+
+**Start menu.** `StartMenuExperienceHost.exe` is a plain (non-AppContainer, no code-integrity mitigations) process. While Start is closed it owns no top-level window, so the DLL is loaded with a `WH_GETMESSAGE` hook on *every* thread of the process that has a message queue, each woken with `PostThreadMessage(WM_NULL)` (`TaskGlassGetMsgProc`). `DllMain` recognises the host by its exe name, starts the same `InitializeXamlDiagnosticsEx` loop, and the replay already contains the tree: `StartMenu.StartBlendedFlexFrame` with `Border` elements named `AcrylicBorder` (main menu and phone panel, each with an `AcrylicOverlay` child). `internal/xaml` checks every 2 s whether the host's pid changed (Windows restarts it) and reattaches.
+
+**File Explorer windows.** XAML is not enough: the file list and navigation pane are drawn by Explorer's own DirectUI, so even with the system acrylic backdrop (`DWMWA_SYSTEMBACKDROP_TYPE`) only the title bar, tabs, command bar and address bar became translucent (measured: 32 to 84 over white) while the list and navigation pane stayed at 25. The layered-window alpha (`WS_EX_LAYERED` + `SetLayeredWindowAttributes`) can be set on a window of another process and affects all of it (25 to 129 at alpha 140), so `internal/winglass` uses that for every visible `CabinetWClass` window of `explorer.exe`, remembers whether it added the style, and removes it again on exit. No code is injected for this. The trade-off is that text becomes translucent too, and a killed TaskGlass leaves windows translucent until they are closed or `--restore` runs.
 
 ## Appearance and assets
 

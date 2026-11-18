@@ -23,6 +23,11 @@ Changes made from the tray menu are saved to this same file.
   "apps": [
     { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
   ],
+  "surfaces": {
+    "tray_overflow":     { "enabled": true, "opacity": 60 },
+    "start_menu_flyout": { "enabled": true, "opacity": 60 },
+    "explorer":          { "enabled": true, "opacity": 85 }
+  },
   "tray_icon": "auto",
   "hotkey_enabled": false,
   "hotkey": "Ctrl+Alt+G",
@@ -45,6 +50,7 @@ Changes made from the tray menu are saved to this same file.
 | `maximized` | rule | Applies on a monitor that has a maximized window. |
 | `start_menu` | rule | Applies while the Start menu or Search has focus. |
 | `apps` | list of app rules | Applies while the named application has focus (max 64, first match wins). |
+| `surfaces` | object | Translucent shell surfaces, see [Glass surfaces](#glass-surfaces). |
 | `tray_icon` | `auto`, `color`, `light`, `dark` | Notification-area icon. `auto` is a monochrome glyph that contrasts with the Windows theme; `color` is the full logo. |
 | `hotkey_enabled` | bool | Turns the global hotkey on. **Off by default**, so TaskGlass never grabs a shortcut you did not ask for. Also in the tray menu (**Global hotkey**). |
 | `hotkey` | string | The shortcut that toggles `enabled` while `hotkey_enabled` is `true`. Default `"Ctrl+Alt+G"`. Needs at least one of `Ctrl`, `Alt`, `Shift`, `Win` and a key `A-Z`, `0-9` or `F1-F24`. It is checked even while the hotkey is off, so a typo is reported right away. |
@@ -63,6 +69,23 @@ Changes made from the tray menu are saved to this same file.
 | `opacity` | 0-100 | Tint opacity in percent. |
 
 A **rule** is an appearance plus `enabled`. An **app rule** is an appearance plus `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path). An app rule applies to the taskbar of the monitor where that application has focus.
+
+## Glass surfaces
+
+`default`, `maximized` and the other rules style the **taskbar**. `surfaces` styles other parts of the shell that the accent effect cannot reach. Each entry is `{ "enabled": true, "opacity": N }`, where `opacity` is how opaque the surface stays: `100` is the stock look, lower values let more of the desktop show through.
+
+| Surface | What it is | How | Needs the DLL |
+|---------|------------|-----|---------------|
+| `tray_overflow` | The flyout with hidden tray icons (the `^` button) | Its XAML background is made translucent | yes (`xaml_fix`) |
+| `start_menu_flyout` | The Start menu and its phone panel | The acrylic background of both is made translucent | yes (`xaml_fix`) |
+| `explorer` | File Explorer windows | The whole window (title bar, list, navigation pane) gets a uniform opacity | no |
+
+Notes:
+
+- `tray_overflow` and `start_menu_flyout` load `taskglass_tap.dll` into Explorer and into `StartMenuExperienceHost.exe`. `"xaml_fix": false` disables both, together with the taskbar fill removal.
+- At `0` the Start menu and the flyout lose their background (and its blur) completely, so text can be hard to read over busy wallpapers; `40`-`70` is usually nicer.
+- `explorer` is applied from outside Explorer, so it works even when Explorer runs each window in its own process. The value is clamped to at least `10`. If TaskGlass is killed, windows can stay translucent until you close them or run `taskglass --restore`; a normal exit restores them.
+- The tray menu has a **Glass surfaces** submenu to turn each on or off.
 
 ## Which rule wins
 
@@ -84,7 +107,7 @@ Colours set to `"auto"` and the `auto` tray icon follow Windows: switch Windows 
 | `--validate` | Check the config and exit; non-zero on errors |
 | `--reset` | Rewrite the config with defaults and exit |
 | `--quit` | Ask the running TaskGlass to exit (restores the taskbar) |
-| `--restore` | Put the taskbar back to normal and exit |
+| `--restore` | Put the taskbar and File Explorer windows back to normal and exit |
 | `--verbose` | Also log to stderr |
 | `--version` | Print the version |
 

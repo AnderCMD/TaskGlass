@@ -24,6 +24,7 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/events"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
 	"github.com/AnderCMD/TaskGlass/internal/theme"
+	"github.com/AnderCMD/TaskGlass/internal/winglass"
 	"github.com/AnderCMD/TaskGlass/internal/xaml"
 )
 
@@ -47,6 +48,7 @@ type App struct {
 
 	systemLight atomic.Bool // Windows reports a light theme
 	mgr         *taskbar.Manager
+	glass       *winglass.Manager
 	xaml        *xaml.Controller // nil when the TAP DLL is unavailable
 	ev          *events.Watcher
 	kick        chan struct{} // asks the loop for an immediate update
@@ -60,6 +62,7 @@ type App struct {
 
 type menuItems struct {
 	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
+	surfTray, surfStart, surfExplorer                     *systray.MenuItem
 	accents                                               map[config.Accent]*systray.MenuItem
 	themes                                                map[config.Theme]*systray.MenuItem
 }
@@ -67,7 +70,7 @@ type menuItems struct {
 // New creates an App with an already-loaded configuration.
 func New(o Options) *App {
 	exe, _ := os.Executable()
-	a := &App{Options: o, exe: exe, cfg: o.Config, mgr: taskbar.New(o.Log), kick: make(chan struct{}, 1)}
+	a := &App{Options: o, exe: exe, cfg: o.Config, mgr: taskbar.New(o.Log), glass: winglass.New(o.Log), kick: make(chan struct{}, 1)}
 	if st, err := os.Stat(o.CfgPath); err == nil {
 		a.modTime = st.ModTime()
 	}
@@ -195,6 +198,8 @@ func (a *App) updateTrayIcon(c config.Config) {
 func (a *App) loop(ctx context.Context) {
 	defer close(a.done)
 	defer a.mgr.Restore()
+	defer a.glass.Restore()
+	winglass.RestoreAll() // windows left translucent by a TaskGlass that was killed
 	if a.xaml != nil {
 		if err := a.xaml.Start(); err != nil {
 			a.Log.Warn("xaml fix disabled", "err", err)
@@ -214,8 +219,13 @@ func (a *App) loop(ctx context.Context) {
 		c := a.snapshot()
 		if !a.safely(panics, func() {
 			styled := a.mgr.Tick(c, a.isLight(c))
+			a.glass.Tick(c.Enabled && c.Surfaces.Explorer.Enabled, c.Surfaces.Explorer.Opacity)
 			if a.xaml != nil {
-				a.xaml.SetHide(c.Enabled && c.XamlFix && styled)
+				on := c.Enabled && c.XamlFix
+				a.xaml.SetHide(on && styled)
+				a.xaml.SetSurfaces(
+					xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, c.Surfaces.TrayOverflow.Opacity),
+					xaml.Encode(on && c.Surfaces.StartMenu.Enabled, c.Surfaces.StartMenu.Opacity))
 			}
 		}) {
 			a.Log.Error("too many internal errors; restoring the taskbar and exiting")
@@ -355,6 +365,9 @@ func (a *App) syncMenu() {
 	check(m.maximized, c.Maximized.Enabled)
 	check(m.start, c.StartMenu.Enabled)
 	check(m.xamlFix, c.XamlFix)
+	check(m.surfTray, c.Surfaces.TrayOverflow.Enabled)
+	check(m.surfStart, c.Surfaces.StartMenu.Enabled)
+	check(m.surfExplorer, c.Surfaces.Explorer.Enabled)
 	for k, it := range m.accents {
 		check(it, k == c.Default.Accent)
 	}
@@ -394,6 +407,10 @@ func (a *App) buildMenu(ctx context.Context) {
 	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
 	m.start = systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
 	m.hotkey = systray.AddMenuItemCheckbox("Global hotkey ("+c.Hotkey+")", "Toggle TaskGlass from anywhere; set the keys in the config file", c.HotkeyEnabled)
+	surfMenu := systray.AddMenuItem("Glass surfaces", "Translucent flyouts and windows; opacity is set in the config file")
+	m.surfTray = surfMenu.AddSubMenuItemCheckbox("Tray overflow flyout", "", c.Surfaces.TrayOverflow.Enabled)
+	m.surfStart = surfMenu.AddSubMenuItemCheckbox("Start menu", "", c.Surfaces.StartMenu.Enabled)
+	m.surfExplorer = surfMenu.AddSubMenuItemCheckbox("File Explorer windows", "", c.Surfaces.Explorer.Enabled)
 	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
 	if a.xaml == nil {
 		m.xamlFix.Disable()
@@ -428,6 +445,9 @@ func (a *App) buildMenu(ctx context.Context) {
 	spawn(m.hotkey.ClickedCh, flip(m.hotkey, func(c *config.Config, on bool) { c.HotkeyEnabled = on }))
 	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
 	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
+	spawn(m.surfTray.ClickedCh, flip(m.surfTray, func(c *config.Config, on bool) { c.Surfaces.TrayOverflow.Enabled = on }))
+	spawn(m.surfStart.ClickedCh, flip(m.surfStart, func(c *config.Config, on bool) { c.Surfaces.StartMenu.Enabled = on }))
+	spawn(m.surfExplorer.ClickedCh, flip(m.surfExplorer, func(c *config.Config, on bool) { c.Surfaces.Explorer.Enabled = on }))
 	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))
 	for ac, it := range m.accents {
 		ac := ac

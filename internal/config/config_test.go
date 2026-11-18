@@ -164,6 +164,29 @@ func TestHotkeyEnabledNeedsAShortcut(t *testing.T) {
 	}
 }
 
+func TestSurfacesDefaultsAndValidation(t *testing.T) {
+	d := Default().Surfaces
+	for name, sf := range map[string]Surface{"tray": d.TrayOverflow, "start": d.StartMenu, "explorer": d.Explorer} {
+		if !sf.Enabled || sf.Opacity <= 0 || sf.Opacity >= 100 {
+			t.Errorf("%s default should be enabled with a partial opacity, got %+v", name, sf)
+		}
+	}
+	c, err := Parse([]byte(`{"version":1,"surfaces":{"explorer":{"enabled":false,"opacity":50}}}`))
+	if err != nil || c.Surfaces.Explorer.Enabled || c.Surfaces.Explorer.Opacity != 50 || !c.Surfaces.StartMenu.Enabled {
+		t.Fatalf("partial surfaces must keep the other defaults: %+v %v", c.Surfaces, err)
+	}
+	for _, bad := range []string{
+		`{"version":1,"surfaces":{"explorer":{"enabled":true,"opacity":101}}}`,
+		`{"version":1,"surfaces":{"tray_overflow":{"enabled":true,"opacity":-1}}}`,
+		`{"version":1,"surfaces":{"start_menu_flyout":{"enabled":true,"opacity":900}}}`,
+		`{"version":1,"surfaces":{"taskbar":{"enabled":true,"opacity":5}}}`,
+	} {
+		if _, err := Parse([]byte(bad)); err == nil {
+			t.Errorf("expected an error for %s", bad)
+		}
+	}
+}
+
 func TestExplicitFalseSticks(t *testing.T) {
 	c, err := Parse([]byte(`{"version":1,"enabled":false,"xaml_fix":false}`))
 	if err != nil || c.Enabled || c.XamlFix {
