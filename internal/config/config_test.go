@@ -262,3 +262,13 @@ func TestSaveRejectsInvalid(t *testing.T) {
 		t.Fatal("expected validation error")
 	}
 }
+
+func TestOldStartMenuRuleStillLoads(t *testing.T) {
+	c, err := Parse([]byte(`{"version":1,"start_menu":{"enabled":true,"accent":"acrylic","color":"auto","opacity":60}}`))
+	if err != nil {
+		t.Fatalf("old config with start_menu rejected: %v", err)
+	}
+	if c.Maximized.Enabled {
+		t.Fatal("maximized must be off by default")
+	}
+}

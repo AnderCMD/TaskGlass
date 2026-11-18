@@ -64,6 +64,10 @@ Windows tiene una API de acento no documentada, `SetWindowCompositionAttribute`,
 
 Para quitar ese relleno, `taskglass_tap.dll` se carga dentro de `explorer.exe` mediante la API XAML Diagnostics, localiza los rectángulos `BackgroundFill` y `BackgroundStroke` de la barra y pone su opacidad a 0 mientras TaskGlass está en marcha. Si TaskGlass se cierra o falla, la DLL lo detecta y restaura el aspecto original por sí sola. Detalles en [docs/architecture.md](docs/architecture.md).
 
+## Antes de empezar
+
+**Desactiva** *Mostrar el color de énfasis en Inicio y en la barra de tareas* en Windows (Configuración > Personalización > Colores). Mientras esté activo, Windows pinta la barra con tu color de énfasis y anula el efecto que aplica TaskGlass, así que la barra no se verá transparente.
+
 ## Limitaciones y seguridad
 
 - Depende de funciones internas no documentadas de Windows. Una actualización puede romperlo; en ese caso la app sigue con efectos de acento (tintes y desenfoque) y registra el motivo.

@@ -126,14 +126,10 @@
       "$ref": "#/definitions/rule",
       "description": "Applies on a monitor that has a maximized window."
     },
-    "start_menu": {
-      "$ref": "#/definitions/rule",
-      "description": "Applies while the Start menu or Search has focus."
-    },
     "apps": {
       "type": "array",
       "maxItems": 64,
-      "description": "Applies while the named application has focus. The first matching rule wins. They take priority over \"maximized\" and are overridden by \"start_menu\".",
+      "description": "Applies while the named application has focus. The first matching rule wins. They take priority over \"maximized\".",
       "items": {
         "type": "object",
         "additionalProperties": false,

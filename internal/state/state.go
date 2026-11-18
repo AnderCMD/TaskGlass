@@ -11,14 +11,11 @@ const (
 	KindDisabled  Kind = "disabled"
 	KindDefault   Kind = "default"
 	KindMaximized Kind = "maximized"
-	KindStartMenu Kind = "start_menu"
 	KindApp       Kind = "app"
 )
 
 // Context is the observed desktop state for one taskbar.
 type Context struct {
-	// StartMenu is true while the Start menu or Search has focus.
-	StartMenu bool
 	// Maximized is true when the taskbar's monitor has a maximized window.
 	Maximized bool
 	// ForegroundExe is the executable file name of the focused window when
@@ -26,14 +23,11 @@ type Context struct {
 	ForegroundExe string
 }
 
-// Resolve picks the appearance for ctx. Priority: master switch, Start menu,
+// Resolve picks the appearance for ctx. Priority: master switch,
 // per-application rule, maximized window, default. Disabled rules are skipped.
 func Resolve(c config.Config, ctx Context) (config.Appearance, Kind) {
 	if !c.Enabled {
 		return config.Appearance{Accent: config.AccentNormal, Color: "#000000"}, KindDisabled
-	}
-	if ctx.StartMenu && c.StartMenu.Enabled {
-		return c.StartMenu.Appearance, KindStartMenu
 	}
 	if ctx.ForegroundExe != "" {
 		for _, r := range c.Apps {

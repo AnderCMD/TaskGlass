@@ -63,13 +63,12 @@ func (m *Manager) Tick(c config.Config, light bool) (styled bool) {
 	if needFg {
 		fgExe, fgMon = winapi.Foreground()
 	}
-	start := c.Enabled && c.StartMenu.Enabled && winapi.StartMenuActive()
 	refresh := time.Duration(c.RefreshMs) * time.Millisecond
 
 	for _, h := range bars {
 		selected[h] = true
 		mon := winapi.Monitor(h)
-		ctx := state.Context{StartMenu: start, Maximized: maxed[mon]}
+		ctx := state.Context{Maximized: maxed[mon]}
 		if needFg && fgMon == mon {
 			ctx.ForegroundExe = fgExe
 		}

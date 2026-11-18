@@ -17,7 +17,7 @@ TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, s
 - **Clear / Blur / Acrylic / Opaque / Normal** styles, including truly transparent on the Windows 11 XAML taskbar (no grey fill, no border line)
 - **Light and dark aware**: `auto` colours and the tray icon follow Windows, live
 - **Translucent tray flyout**: the flyout with the hidden icons (the `^` button) gets its own opacity
-- **Smart rules**: opaque when a window is maximized, a different look while the Start menu is open, or per application (`code.exe`, `chrome.exe`, ...)
+- **Smart rules**: an optional look when a window is maximized, or per application (`code.exe`, `chrome.exe`, ...)
 - **Global hotkey** to toggle the effect (off by default, one switch to enable), and a master on/off switch
 - **Multi-monitor**: every taskbar handled independently, or only the primary one
 - **Event driven**: reacts to window events instead of polling, about 0 % CPU when idle
@@ -63,6 +63,10 @@ Files: config `%APPDATA%\TaskGlass\config.json`, log `%LOCALAPPDATA%\TaskGlass\t
 Windows exposes an undocumented accent API, `SetWindowCompositionAttribute`, that TaskGlass uses to blur or tint the taskbar. On Windows 11 the taskbar additionally paints its own semi-transparent grey XAML fill and border on top, so the accent alone can never be fully clear.
 
 To remove that fill, `taskglass_tap.dll` is loaded into `explorer.exe` through the XAML Diagnostics API, finds the taskbar's `BackgroundFill` and `BackgroundStroke` rectangles and sets their opacity to 0 while TaskGlass runs. If TaskGlass exits or crashes, the DLL notices and restores the stock look by itself. Details in [docs/architecture.md](docs/architecture.md).
+
+## Before you start
+
+Turn **off** *Show accent color on Start and taskbar* in Windows (Settings > Personalization > Colors). While it is on, Windows paints the taskbar with your accent color and overrides the effect TaskGlass applies, so the bar will not look transparent.
 
 ## Limitations and safety
 

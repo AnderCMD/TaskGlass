@@ -9,13 +9,10 @@ import (
 func TestResolve(t *testing.T) {
 	base := config.Default()
 	base.Maximized.Enabled = true
-	base.StartMenu.Enabled = true
 	base.Apps = []config.AppRule{{Exe: "code.exe", Appearance: config.Appearance{Accent: config.AccentBlur, Color: "auto", Opacity: 30}}}
 
 	noMax := base
 	noMax.Maximized.Enabled = false
-	noStart := base
-	noStart.StartMenu.Enabled = false
 	off := base
 	off.Enabled = false
 
@@ -27,16 +24,11 @@ func TestResolve(t *testing.T) {
 	}{
 		{"idle", base, Context{}, KindDefault},
 		{"maximized", base, Context{Maximized: true}, KindMaximized},
-		{"start", base, Context{StartMenu: true}, KindStartMenu},
-		{"start beats maximized", base, Context{StartMenu: true, Maximized: true}, KindStartMenu},
 		{"maximized rule disabled", noMax, Context{Maximized: true}, KindDefault},
-		{"start rule disabled falls to maximized", noStart, Context{StartMenu: true, Maximized: true}, KindMaximized},
-		{"start rule disabled alone", noStart, Context{StartMenu: true}, KindDefault},
 		{"app rule", base, Context{ForegroundExe: "Code.exe"}, KindApp},
 		{"app rule beats maximized", base, Context{ForegroundExe: "code.exe", Maximized: true}, KindApp},
-		{"start beats app rule", base, Context{ForegroundExe: "code.exe", StartMenu: true}, KindStartMenu},
 		{"unmatched app falls through", base, Context{ForegroundExe: "notepad.exe", Maximized: true}, KindMaximized},
-		{"master switch off", off, Context{Maximized: true, StartMenu: true, ForegroundExe: "code.exe"}, KindDisabled},
+		{"master switch off", off, Context{Maximized: true, ForegroundExe: "code.exe"}, KindDisabled},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

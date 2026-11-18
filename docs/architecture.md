@@ -36,9 +36,8 @@ Each wake-up runs `taskbar.Manager.Tick`:
 
 1. finds all taskbars (new monitors and Explorer restarts are handled for free; vanished handles are dropped; taskbars no longer selected by `taskbars: primary` are handed back),
 2. only if a rule needs it, enumerates top-level windows once for monitors with a maximized, visible, non-cloaked, non-tool window, and reads the focused window's executable,
-3. checks whether the foreground window is the Start/Search host (`Windows.UI.Core.CoreWindow` owned by `StartMenuExperienceHost` / `SearchHost` / `SearchApp`),
-4. resolves each taskbar's appearance with `state.Resolve` (priority: master switch, Start menu, app rule, maximized, default) and resolves `auto` colours against the theme,
-5. applies it only if the resolved policy changed or `refresh_ms` elapsed.
+3. resolves each taskbar's appearance with `state.Resolve` (priority: master switch, app rule, maximized, default) and resolves `auto` colours against the theme,
+4. applies it only if the resolved policy changed or `refresh_ms` elapsed.
 
 With nothing happening the process sleeps in the scheduler: measured at 0.0 ms of CPU over 8 s.
 

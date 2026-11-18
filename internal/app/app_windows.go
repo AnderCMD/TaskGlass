@@ -59,10 +59,10 @@ type App struct {
 }
 
 type menuItems struct {
-	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
-	surfTray                                              *systray.MenuItem
-	accents                                               map[config.Accent]*systray.MenuItem
-	themes                                                map[config.Theme]*systray.MenuItem
+	enabled, hotkey, maximized, xamlFix, autostart *systray.MenuItem
+	surfTray                                       *systray.MenuItem
+	accents                                        map[config.Accent]*systray.MenuItem
+	themes                                         map[config.Theme]*systray.MenuItem
 }
 
 // New creates an App with an already-loaded configuration.
@@ -356,7 +356,6 @@ func (a *App) syncMenu() {
 	c := a.snapshot()
 	check(m.enabled, c.Enabled)
 	check(m.maximized, c.Maximized.Enabled)
-	check(m.start, c.StartMenu.Enabled)
 	check(m.xamlFix, c.XamlFix)
 	check(m.surfTray, c.Surfaces.TrayOverflow.Enabled)
 	for k, it := range m.accents {
@@ -396,7 +395,6 @@ func (a *App) buildMenu(ctx context.Context) {
 	}
 
 	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
-	m.start = systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
 	m.hotkey = systray.AddMenuItemCheckbox("Global hotkey ("+c.Hotkey+")", "Toggle TaskGlass from anywhere; set the keys in the config file", c.HotkeyEnabled)
 	m.surfTray = systray.AddMenuItemCheckbox("Translucent tray flyout", "Make the hidden-icons flyout (the ^ button) translucent; opacity is set in the config file", c.Surfaces.TrayOverflow.Enabled)
 	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
@@ -432,7 +430,6 @@ func (a *App) buildMenu(ctx context.Context) {
 	spawn(m.enabled.ClickedCh, flip(m.enabled, func(c *config.Config, on bool) { c.Enabled = on }))
 	spawn(m.hotkey.ClickedCh, flip(m.hotkey, func(c *config.Config, on bool) { c.HotkeyEnabled = on }))
 	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
-	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
 	spawn(m.surfTray.ClickedCh, flip(m.surfTray, func(c *config.Config, on bool) { c.Surfaces.TrayOverflow.Enabled = on }))
 	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))
 	for ac, it := range m.accents {

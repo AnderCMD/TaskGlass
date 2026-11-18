@@ -10,6 +10,9 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - Opacity values accept decimals (`99.5`) and are rounded; `null` and out-of-range values are rejected with a clear message.
 
 ### Changed
+- Documented that *Show accent color on Start and taskbar* must be off in Windows, because it overrides the taskbar effect.
+- **Defaults**: the taskbar stays fully transparent with a maximized window too (`maximized.enabled` is now `false`), and the tray flyout keeps 10 % opacity, just enough not to lose the icons.
+- **Removed** the `start_menu` rule. An old config that still has the key keeps loading; the key is ignored and dropped on the next save.
 - TaskGlass has a single purpose again: the taskbar and the tray flyout. Experiments with other surfaces (Start menu, File Explorer windows, per-application window opacity, look presets) were removed before release. A config that still has `surfaces.start_menu_flyout` or `surfaces.explorer` keeps loading; the keys are ignored and dropped on the next save.
 - GitHub Actions bumped: `checkout` 7, `setup-go` 6, `upload-artifact` 7.
 - The helper DLL finds XAML elements in every tree it has seen an event from, rescans after bursts of events and keeps looking while something wanted is missing.

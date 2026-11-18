@@ -186,11 +186,11 @@ type Surfaces struct {
 	// TrayOverflow is the flyout that lists hidden tray icons (the ^ button).
 	TrayOverflow Surface `json:"tray_overflow"`
 
-	// LegacyStartMenu and LegacyExplorer are keys that existed in unreleased
+	// LegacySurfaceStartMenu and LegacyExplorer are keys that existed in unreleased
 	// builds. They are still accepted so an old config keeps loading, ignored,
 	// and dropped on the next save.
-	LegacyStartMenu json.RawMessage `json:"start_menu_flyout,omitempty"`
-	LegacyExplorer  json.RawMessage `json:"explorer,omitempty"`
+	LegacySurfaceStartMenu json.RawMessage `json:"start_menu_flyout,omitempty"`
+	LegacyExplorer         json.RawMessage `json:"explorer,omitempty"`
 }
 
 // Rule is an Appearance that only applies when Enabled is true.
@@ -221,8 +221,9 @@ type Config struct {
 	Default Appearance `json:"default"`
 	// Maximized applies on a monitor that has a maximized window.
 	Maximized Rule `json:"maximized"`
-	// StartMenu applies while the Start menu / Search is focused.
-	StartMenu Rule `json:"start_menu"`
+	// LegacyStartMenu is the removed Start menu rule. It is still accepted so an
+	// old config keeps loading, ignored, and dropped on the next save.
+	LegacyStartMenu json.RawMessage `json:"start_menu,omitempty"`
 	// Apps apply while the named application is focused (first match wins).
 	Apps []AppRule `json:"apps"`
 	// Surfaces are shell flyouts whose own background can be made translucent.
@@ -261,15 +262,11 @@ func Default() Config {
 		Taskbars: TaskbarsAll,
 		Default:  Appearance{Accent: AccentClear, Color: ColorAuto, Opacity: 0},
 		Maximized: Rule{
-			Enabled:    true,
+			Enabled:    false,
 			Appearance: Appearance{Accent: AccentOpaque, Color: ColorAuto, Opacity: 100},
 		},
-		StartMenu: Rule{
-			Enabled:    false,
-			Appearance: Appearance{Accent: AccentAcrylic, Color: ColorAuto, Opacity: 60},
-		},
 		Surfaces: Surfaces{
-			TrayOverflow: Surface{Enabled: true, Opacity: 30},
+			TrayOverflow: Surface{Enabled: true, Opacity: 10},
 		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
@@ -305,7 +302,6 @@ func (c Config) Validate() error {
 	}{
 		{"default", c.Default},
 		{"maximized", c.Maximized.Appearance},
-		{"start_menu", c.StartMenu.Appearance},
 	}
 	for _, k := range checks {
 		if err := k.a.Validate(); err != nil {
@@ -485,7 +481,7 @@ func Save(path string, c Config) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
-	c.Surfaces.LegacyStartMenu, c.Surfaces.LegacyExplorer = nil, nil // dropped for good on the first save
+	c.LegacyStartMenu, c.Surfaces.LegacySurfaceStartMenu, c.Surfaces.LegacyExplorer = nil, nil, nil // dropped for good on the first save
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err

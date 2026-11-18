@@ -18,13 +18,12 @@ Changes made from the tray menu are saved to this same file.
   "theme": "auto",
   "taskbars": "all",
   "default":    { "accent": "clear",  "color": "auto", "opacity": 0 },
-  "maximized":  { "enabled": true,  "accent": "opaque",  "color": "auto", "opacity": 100 },
-  "start_menu": { "enabled": false, "accent": "acrylic", "color": "auto", "opacity": 60 },
+  "maximized":  { "enabled": false, "accent": "opaque",  "color": "auto", "opacity": 100 },
   "apps": [
     { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
   ],
   "surfaces": {
-    "tray_overflow": { "enabled": true, "opacity": 30 }
+    "tray_overflow": { "enabled": true, "opacity": 10 }
   },
   "tray_icon": "auto",
   "hotkey_enabled": false,
@@ -45,8 +44,7 @@ Changes made from the tray menu are saved to this same file.
 | `theme` | `auto`, `light`, `dark` | Which colour mode drives `"auto"` colours and the tray icon. `auto` follows the Windows *system* theme (the one the taskbar uses). |
 | `taskbars` | `all`, `primary` | Style every monitor's taskbar or only the primary one. |
 | `default` | appearance | Used when no other rule matches. |
-| `maximized` | rule | Applies on a monitor that has a maximized window. |
-| `start_menu` | rule | Applies while the Start menu or Search has focus. |
+| `maximized` | rule | Applies on a monitor that has a maximized window. Off by default: the bar stays as transparent as without a maximized window. |
 | `apps` | list of app rules | Applies while the named application has focus (max 64, first match wins). |
 | `surfaces` | object | Currently only `tray_overflow`, see [Tray flyout](#tray-flyout). |
 | `tray_icon` | `auto`, `color`, `light`, `dark` | Notification-area icon. `auto` is a monochrome glyph that contrasts with the Windows theme; `color` is the full logo. |
@@ -76,13 +74,16 @@ Opacity values accept decimals (`99.5`) and are rounded to a whole number.
 
 Why the DLL: the flyout draws its own XAML background, which the accent effect does not reach, so TaskGlass loads its helper DLL into Explorer to change it, the same way it removes the taskbar's own fill.
 
+## Windows setting that overrides the bar
+
+Keep *Show accent color on Start and taskbar* (Settings > Personalization > Colors) turned **off**. When it is on, Windows paints the taskbar with the accent color and overrides whatever TaskGlass sets, whatever the rules say.
+
 ## Which rule wins
 
 1. `enabled: false` → stock taskbar.
-2. `start_menu` (when enabled and the Start menu or Search has focus).
-3. The first matching entry in `apps`.
-4. `maximized` (when enabled and the taskbar's monitor has a maximized window).
-5. `default`.
+2. The first matching entry in `apps`.
+3. `maximized` (when enabled and the taskbar's monitor has a maximized window).
+4. `default`.
 
 ## Light and dark mode
 
