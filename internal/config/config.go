@@ -164,8 +164,8 @@ func (a Appearance) RGB(light bool) (r, g, b uint8) {
 }
 
 // Surface controls the background opacity of a shell surface that accent
-// effects cannot reach (a flyout drawn by XAML inside the shell or the Start
-// menu host). It needs taskglass_tap.dll and xaml_fix.
+// effects cannot reach (a flyout drawn by XAML inside Explorer). It needs
+// taskglass_tap.dll and xaml_fix.
 type Surface struct {
 	Enabled bool `json:"enabled"`
 	// Opacity of the surface background: 100 is the stock look, 0 removes the
@@ -185,11 +185,12 @@ func (s Surface) Validate() error {
 type Surfaces struct {
 	// TrayOverflow is the flyout that lists hidden tray icons (the ^ button).
 	TrayOverflow Surface `json:"tray_overflow"`
-	// StartMenu is the Start menu flyout and its phone panel.
-	StartMenu Surface `json:"start_menu_flyout"`
-	// LegacyExplorer is a key that existed in unreleased builds. It is still
-	// accepted so an old config keeps loading, ignored, and dropped on the next save.
-	LegacyExplorer json.RawMessage `json:"explorer,omitempty"`
+
+	// LegacyStartMenu and LegacyExplorer are keys that existed in unreleased
+	// builds. They are still accepted so an old config keeps loading, ignored,
+	// and dropped on the next save.
+	LegacyStartMenu json.RawMessage `json:"start_menu_flyout,omitempty"`
+	LegacyExplorer  json.RawMessage `json:"explorer,omitempty"`
 }
 
 // Rule is an Appearance that only applies when Enabled is true.
@@ -203,10 +204,6 @@ type AppRule struct {
 	// Exe is the executable file name, matched case-insensitively
 	// (for example "chrome.exe").
 	Exe string `json:"exe"`
-	// WindowOpacity, when set, makes the application's own windows uniformly
-	// translucent while TaskGlass runs (100 = stock). It is independent of the
-	// taskbar appearance below.
-	WindowOpacity *Percent `json:"window_opacity,omitempty"`
 	Appearance
 }
 
@@ -273,7 +270,6 @@ func Default() Config {
 		},
 		Surfaces: Surfaces{
 			TrayOverflow: Surface{Enabled: true, Opacity: 60},
-			StartMenu:    Surface{Enabled: true, Opacity: 60},
 		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
@@ -316,7 +312,7 @@ func (c Config) Validate() error {
 			return fmt.Errorf("%s: %w", k.name, err)
 		}
 	}
-	for name, sf := range map[string]Surface{"tray_overflow": c.Surfaces.TrayOverflow, "start_menu_flyout": c.Surfaces.StartMenu} {
+	for name, sf := range map[string]Surface{"tray_overflow": c.Surfaces.TrayOverflow} {
 		if err := sf.Validate(); err != nil {
 			return fmt.Errorf("surfaces.%s: %w", name, err)
 		}
@@ -378,22 +374,8 @@ func (r AppRule) Validate() error {
 	if strings.ContainsAny(exe, `\/:*?"<>|`) {
 		return fmt.Errorf("exe %q must be a bare file name like chrome.exe", r.Exe)
 	}
-	if r.WindowOpacity != nil && (*r.WindowOpacity < 0 || *r.WindowOpacity > 100) {
-		return fmt.Errorf("window_opacity %d out of range [0, 100]", *r.WindowOpacity)
-	}
-	if r.Accent == "" {
-		// a window-opacity-only rule: the taskbar appearance is not used
-		if r.WindowOpacity == nil {
-			return errors.New("needs an accent or a window_opacity")
-		}
-		return nil
-	}
 	return r.Appearance.Validate()
 }
-
-// StylesTaskbar reports whether the rule changes the taskbar appearance (as
-// opposed to only the application's window opacity).
-func (r AppRule) StylesTaskbar() bool { return r.Accent != "" }
 
 // Matches reports whether the rule applies to the executable file name exe.
 func (r AppRule) Matches(exe string) bool {
@@ -503,7 +485,7 @@ func Save(path string, c Config) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
-	c.Surfaces.LegacyExplorer = nil // dropped for good on the first save
+	c.Surfaces.LegacyStartMenu, c.Surfaces.LegacyExplorer = nil, nil // dropped for good on the first save
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err

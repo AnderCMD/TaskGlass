@@ -5,23 +5,18 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [1.1.0] - 2026-11-18
 
 ### Added
+- **Translucent tray flyout**: `surfaces.tray_overflow` makes the flyout with the hidden tray icons (the `^` button) translucent, with its own opacity, enabled by default, and a tray menu item. The helper DLL finds the flyout even when it already existed before TaskGlass started; for that TaskGlass briefly adds and removes a tray icon, and stops as soon as the DLL reports it is tracked.
 - **Windows installer** (`TaskGlass-<version>-Setup.exe`, Inno Setup): per-user, no administrator rights, English and Spanish, optional start with Windows and desktop shortcut. Uninstalling asks the running TaskGlass to quit, restores the taskbar and offers to delete settings. `scripts/build-installer.ps1` builds it; the release workflow publishes it with checksums for both files and CI builds it on every run.
-- **Glass surfaces** (`surfaces` in the config, **Glass surfaces** in the tray menu), each with its own opacity and enabled by default:
-  - `tray_overflow`: the flyout with hidden tray icons.
-  - `start_menu_flyout`: the Start menu and its phone panel (the helper DLL is now also loaded into `StartMenuExperienceHost.exe`, hooked through its UI threads because it owns no window while Start is closed).
-- **Looks**: `taskglass --preset liquid|clear|subtle|stock`, `--list-presets` and a **Look preset** tray submenu. `liquid` frosts the taskbar and makes the flyout and Start menu translucent; presets keep your app rules, hotkey and theme.
-- **Window opacity per application**: `window_opacity` in an app rule makes every window of that application uniformly translucent. A rule may use only `window_opacity` and no taskbar accent.
 - Opacity values accept decimals (`99.5`) and are rounded; `null` and out-of-range values are rejected with a clear message.
-- The shared-memory block grew to 8 slots (still readable by older DLLs). Groundwork for `ShellExperienceHost` (notification centre) is in the DLL and controller but not exposed: see `docs/architecture.md`.
 
 ### Changed
+- TaskGlass has a single purpose again: the taskbar and the tray flyout. Experiments with other surfaces (Start menu, File Explorer windows, per-application window opacity, look presets) were removed before release. A config that still has `surfaces.start_menu_flyout` or `surfaces.explorer` keeps loading; the keys are ignored and dropped on the next save.
 - GitHub Actions bumped: `checkout` 7, `setup-go` 6, `upload-artifact` 7.
 - The helper DLL finds XAML elements in every tree it has seen an event from, rescans after bursts of events and keeps looking while something wanted is missing.
-- The tray overflow flyout is found even when it already existed before TaskGlass started or before an updated DLL attached: TaskGlass briefly adds and removes a tray icon to make the tray emit the events the DLL needs, and stops as soon as the DLL reports it is tracked.
 - The debug dump (`tap.dump`) can be switched on and off while the DLL is loaded.
 
 ### Known limitations
-- Context menus, notifications, calendar and quick settings are not styled yet.
+- Context menus, notifications, calendar, quick settings, the Start menu and File Explorer windows are not styled.
 
 ## [1.0.1] - 2026-11-17
 

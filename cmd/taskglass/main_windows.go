@@ -38,8 +38,6 @@ func main() {
 		validate    = flag.Bool("validate", false, "check the config file and exit (non-zero on errors)")
 		quit        = flag.Bool("quit", false, "ask a running TaskGlass to exit")
 		verbose     = flag.Bool("verbose", false, "log to stderr as well as the log file")
-		preset      = flag.String("preset", "", "apply a look and exit: liquid, clear, subtle or stock (keeps your app rules, hotkey and theme)")
-		presetList  = flag.Bool("list-presets", false, "list the available presets and exit")
 		restore     = flag.Bool("restore", false, "put the taskbar back to the stock look and exit (use after a crash)")
 	)
 	flag.Usage = func() {
@@ -53,12 +51,6 @@ func main() {
 
 	if *showVersion {
 		fmt.Println(versionString())
-		return
-	}
-	if *presetList {
-		for _, p := range config.Presets() {
-			fmt.Printf("%-8s %s\n", p.Name, p.Description)
-		}
 		return
 	}
 	if *restore {
@@ -80,21 +72,6 @@ func main() {
 			fatal("cannot locate config dir: %v", err)
 		}
 		cfgPath = filepath.Join(dir, "TaskGlass", "config.json")
-	}
-	if *preset != "" {
-		cur, err := config.Load(cfgPath)
-		if err != nil {
-			fatal("%s: %v", cfgPath, err)
-		}
-		next, err := config.ApplyPreset(cur, *preset)
-		if err != nil {
-			fatal("%v", err)
-		}
-		if err := config.Save(cfgPath, next); err != nil {
-			fatal("save: %v", err)
-		}
-		fmt.Printf("preset %s applied to %s (a running TaskGlass picks it up within a second)\n", strings.ToLower(strings.TrimSpace(*preset)), cfgPath)
-		return
 	}
 	if *reset {
 		if err := config.Save(cfgPath, config.Default()); err != nil {

@@ -166,19 +166,18 @@ func TestHotkeyEnabledNeedsAShortcut(t *testing.T) {
 
 func TestSurfacesDefaultsAndValidation(t *testing.T) {
 	d := Default().Surfaces
-	for name, sf := range map[string]Surface{"tray": d.TrayOverflow, "start": d.StartMenu} {
+	for name, sf := range map[string]Surface{"tray": d.TrayOverflow} {
 		if !sf.Enabled || sf.Opacity <= 0 || sf.Opacity >= 100 {
 			t.Errorf("%s default should be enabled with a partial opacity, got %+v", name, sf)
 		}
 	}
 	c, err := Parse([]byte(`{"version":1,"surfaces":{"tray_overflow":{"enabled":false,"opacity":50}}}`))
-	if err != nil || c.Surfaces.TrayOverflow.Enabled || c.Surfaces.TrayOverflow.Opacity != 50 || !c.Surfaces.StartMenu.Enabled {
+	if err != nil || c.Surfaces.TrayOverflow.Enabled || c.Surfaces.TrayOverflow.Opacity != 50 {
 		t.Fatalf("partial surfaces must keep the other defaults: %+v %v", c.Surfaces, err)
 	}
 	for _, bad := range []string{
-		`{"version":1,"surfaces":{"start_menu_flyout":{"enabled":true,"opacity":101}}}`,
+		`{"version":1,"surfaces":{"tray_overflow":{"enabled":true,"opacity":101}}}`,
 		`{"version":1,"surfaces":{"tray_overflow":{"enabled":true,"opacity":-1}}}`,
-		`{"version":1,"surfaces":{"start_menu_flyout":{"enabled":true,"opacity":900}}}`,
 		`{"version":1,"surfaces":{"taskbar":{"enabled":true,"opacity":5}}}`,
 	} {
 		if _, err := Parse([]byte(bad)); err == nil {
@@ -188,57 +187,17 @@ func TestSurfacesDefaultsAndValidation(t *testing.T) {
 }
 
 func TestOpacityAcceptsDecimals(t *testing.T) {
-	c, err := Parse([]byte(`{"version":1,"surfaces":{"start_menu_flyout":{"enabled":true,"opacity":99.5},"tray_overflow":{"enabled":true,"opacity":60.4}},"default":{"accent":"blur","color":"auto","opacity":12.6}}`))
+	c, err := Parse([]byte(`{"version":1,"surfaces":{"tray_overflow":{"enabled":true,"opacity":60.4}},"default":{"accent":"blur","color":"auto","opacity":12.6}}`))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if c.Surfaces.StartMenu.Opacity != 100 || c.Surfaces.TrayOverflow.Opacity != 60 || c.Default.Opacity != 13 {
+	if c.Surfaces.TrayOverflow.Opacity != 60 || c.Default.Opacity != 13 {
 		t.Fatalf("decimals must be rounded: %+v", c)
 	}
 	for _, bad := range []string{`"abc"`, `true`, `null`, `[1]`, `1e999`, `100.6`, `-0.6`} {
-		if _, err := Parse([]byte(`{"version":1,"surfaces":{"start_menu_flyout":{"enabled":true,"opacity":` + bad + `}}}`)); err == nil {
+		if _, err := Parse([]byte(`{"version":1,"surfaces":{"tray_overflow":{"enabled":true,"opacity":` + bad + `}}}`)); err == nil {
 			t.Errorf("opacity %s must be rejected", bad)
 		}
-	}
-}
-
-func TestAppWindowOpacity(t *testing.T) {
-	c, err := Parse([]byte(`{"version":1,"apps":[{"exe":"Code.exe","window_opacity":92.4},{"exe":"x.exe","accent":"blur","color":"auto","opacity":30}]}`))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if c.Apps[0].WindowOpacity == nil || *c.Apps[0].WindowOpacity != 92 || c.Apps[0].StylesTaskbar() {
-		t.Fatalf("window-only rule parsed wrong: %+v", c.Apps[0])
-	}
-	if c.Apps[1].WindowOpacity != nil || !c.Apps[1].StylesTaskbar() {
-		t.Fatalf("taskbar rule parsed wrong: %+v", c.Apps[1])
-	}
-	for _, bad := range []string{
-		`{"version":1,"apps":[{"exe":"a.exe"}]}`,
-		`{"version":1,"apps":[{"exe":"a.exe","window_opacity":101}]}`,
-		`{"version":1,"apps":[{"exe":"a.exe","window_opacity":-1}]}`,
-	} {
-		if _, err := Parse([]byte(bad)); err == nil {
-			t.Errorf("expected an error for %s", bad)
-		}
-	}
-}
-
-func TestLegacyExplorerKeyIsAcceptedAndDropped(t *testing.T) {
-	c, err := Parse([]byte(`{"version":1,"surfaces":{"explorer":{"enabled":true,"opacity":85},"tray_overflow":{"enabled":true,"opacity":70}}}`))
-	if err != nil {
-		t.Fatalf("an old config must keep loading: %v", err)
-	}
-	if c.Surfaces.TrayOverflow.Opacity != 70 {
-		t.Fatalf("other surface keys must still apply: %+v", c.Surfaces)
-	}
-	p := filepath.Join(t.TempDir(), "c.json")
-	if err := Save(p, c); err != nil {
-		t.Fatal(err)
-	}
-	b, _ := os.ReadFile(p)
-	if strings.Contains(string(b), "explorer") {
-		t.Fatalf("the legacy key must be dropped on save:\n%s", b)
 	}
 }
 

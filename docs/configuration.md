@@ -21,12 +21,10 @@ Changes made from the tray menu are saved to this same file.
   "maximized":  { "enabled": true,  "accent": "opaque",  "color": "auto", "opacity": 100 },
   "start_menu": { "enabled": false, "accent": "acrylic", "color": "auto", "opacity": 60 },
   "apps": [
-    { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 },
-    { "exe": "chrome.exe", "window_opacity": 92 }
+    { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
   ],
   "surfaces": {
-    "tray_overflow":     { "enabled": true, "opacity": 60 },
-    "start_menu_flyout": { "enabled": true, "opacity": 60 }
+    "tray_overflow": { "enabled": true, "opacity": 60 }
   },
   "tray_icon": "auto",
   "hotkey_enabled": false,
@@ -49,8 +47,8 @@ Changes made from the tray menu are saved to this same file.
 | `default` | appearance | Used when no other rule matches. |
 | `maximized` | rule | Applies on a monitor that has a maximized window. |
 | `start_menu` | rule | Applies while the Start menu or Search has focus. |
-| `apps` | list of app rules | Per-application rules (max 64, first match wins): restyle the taskbar while the app has focus and/or make its windows translucent with `window_opacity`. |
-| `surfaces` | object | Translucent shell surfaces, see [Glass surfaces](#glass-surfaces). |
+| `apps` | list of app rules | Applies while the named application has focus (max 64, first match wins). |
+| `surfaces` | object | Currently only `tray_overflow`, see [Tray flyout](#tray-flyout). |
 | `tray_icon` | `auto`, `color`, `light`, `dark` | Notification-area icon. `auto` is a monochrome glyph that contrasts with the Windows theme; `color` is the full logo. |
 | `hotkey_enabled` | bool | Turns the global hotkey on. **Off by default**, so TaskGlass never grabs a shortcut you did not ask for. Also in the tray menu (**Global hotkey**). |
 | `hotkey` | string | The shortcut that toggles `enabled` while `hotkey_enabled` is `true`. Default `"Ctrl+Alt+G"`. Needs at least one of `Ctrl`, `Alt`, `Shift`, `Win` and a key `A-Z`, `0-9` or `F1-F24`. It is checked even while the hotkey is off, so a typo is reported right away. |
@@ -68,47 +66,15 @@ Changes made from the tray menu are saved to this same file.
 | `color` | `#RRGGBB` or `auto` | Tint colour. `auto` follows the theme: `#1C1C1C` in dark mode, `#F3F3F3` in light mode (matching the stock taskbar). |
 | `opacity` | 0-100 | Tint opacity in percent. |
 
-A **rule** is an appearance plus `enabled`. An **app rule** has `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path), plus either or both of:
-
-- an appearance (`accent`, `color`, `opacity`), applied to the taskbar of the monitor where that application has focus;
-- `window_opacity` (0-100), which makes every window of the application uniformly translucent while TaskGlass runs, content included. It works from outside the application with the layered-window alpha, so nothing is loaded into the application; windows closed or no longer matching a rule are given back. If TaskGlass is killed, windows can stay translucent until they are closed. Dialogs, tool windows and tiny windows are left alone.
+A **rule** is an appearance plus `enabled`. An **app rule** is an appearance plus `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path). An app rule applies to the taskbar of the monitor where that application has focus.
 
 Opacity values accept decimals (`99.5`) and are rounded to a whole number.
 
-## Presets
+## Tray flyout
 
-A preset sets the whole look in one go. It replaces the taskbar appearances, the `maximized` and `start_menu` rules and the `surfaces`, and keeps your app rules, hotkey, theme and everything else.
+`surfaces.tray_overflow` makes the flyout with the hidden tray icons (the `^` button) translucent: `{ "enabled": true, "opacity": N }`, where `opacity` is how opaque its background stays. `100` is the stock look and `0` removes the background completely (the icons then float over the desktop). It needs `taskglass_tap.dll` and `xaml_fix`, and a tray menu item turns it on or off.
 
-```bash
-taskglass --list-presets
-taskglass --preset liquid
-```
-
-The tray menu has a **Look preset** submenu doing the same. A running TaskGlass picks the change up within a second.
-
-| Preset | Look |
-|--------|------|
-| `liquid` | Frosted (acrylic) taskbar, translucent Start menu and tray flyout. The closest to macOS-style glass that Windows allows. |
-| `clear` | Fully transparent taskbar, translucent flyout and Start menu. The default look of 1.0. |
-| `subtle` | Light blur on the taskbar, barely translucent shell. |
-| `stock` | Turns TaskGlass off (the stock Windows look). |
-
-Real macOS "liquid glass" refracts what is behind it and adds specular highlights. Windows exposes no way to add that to other programs, so `liquid` approximates it with blur, transparency and theme-aware tints.
-
-## Glass surfaces
-
-`default`, `maximized` and the other rules style the **taskbar**. `surfaces` styles other parts of the shell that the accent effect cannot reach. Each entry is `{ "enabled": true, "opacity": N }`, where `opacity` is how opaque the surface stays: `100` is the stock look, lower values let more of the desktop show through.
-
-| Surface | What it is | How | Needs the DLL |
-|---------|------------|-----|---------------|
-| `tray_overflow` | The flyout with hidden tray icons (the `^` button) | Its XAML background is made translucent | yes (`xaml_fix`) |
-| `start_menu_flyout` | The Start menu and its phone panel | The acrylic background of both is made translucent | yes (`xaml_fix`) |
-
-Notes:
-
-- `tray_overflow` and `start_menu_flyout` load `taskglass_tap.dll` into Explorer and into `StartMenuExperienceHost.exe`. `"xaml_fix": false` disables both, together with the taskbar fill removal.
-- At `0` the Start menu and the flyout lose their background (and its blur) completely, so text can be hard to read over busy wallpapers; `40`-`70` is usually nicer.
-- The tray menu has a **Glass surfaces** submenu to turn each on or off.
+Why the DLL: the flyout draws its own XAML background, which the accent effect does not reach, so TaskGlass loads its helper DLL into Explorer to change it, the same way it removes the taskbar's own fill.
 
 ## Which rule wins
 
@@ -128,8 +94,6 @@ Colours set to `"auto"` and the `auto` tray icon follow Windows: switch Windows 
 |------|---------|
 | `--config <path>` | Use a custom config file |
 | `--validate` | Check the config and exit; non-zero on errors |
-| `--preset <name>` | Apply a look (`liquid`, `clear`, `subtle`, `stock`) and exit |
-| `--list-presets` | List the presets |
 | `--reset` | Rewrite the config with defaults and exit |
 | `--quit` | Ask the running TaskGlass to exit (restores the taskbar) |
 | `--restore` | Put the taskbar back to normal and exit |

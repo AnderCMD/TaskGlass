@@ -8,7 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
-TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, so only the icons remain. It is a small tray app written in Go (no cgo) plus a native helper DLL, with no runtime to install. It follows Windows' light and dark mode.
+TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, so only the icons remain, and makes the flyout with the hidden tray icons translucent too. That is all it does. It is a small tray app written in Go (no cgo) plus a native helper DLL, with no runtime to install. It follows Windows' light and dark mode.
 
 [Leer en español](README.es.md)
 
@@ -16,9 +16,8 @@ TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, s
 
 - **Clear / Blur / Acrylic / Opaque / Normal** styles, including truly transparent on the Windows 11 XAML taskbar (no grey fill, no border line)
 - **Light and dark aware**: `auto` colours and the tray icon follow Windows, live
-- **Glass for more than the taskbar**: the tray overflow flyout and the Start menu can be translucent too, each with its own opacity
-- **One-command looks**: `taskglass --preset liquid` (or the tray menu) applies a complete frosted-glass look; `clear`, `subtle` and `stock` are included
-- **Smart rules**: opaque when a window is maximized, a different look while the Start menu is open, or per application (`code.exe`, `chrome.exe`, ...), including a translucent window for any app
+- **Translucent tray flyout**: the flyout with the hidden icons (the `^` button) gets its own opacity
+- **Smart rules**: opaque when a window is maximized, a different look while the Start menu is open, or per application (`code.exe`, `chrome.exe`, ...)
 - **Global hotkey** to toggle the effect (off by default, one switch to enable), and a master on/off switch
 - **Multi-monitor**: every taskbar handled independently, or only the primary one
 - **Event driven**: reacts to window events instead of polling, about 0 % CPU when idle
@@ -40,7 +39,7 @@ powershell -File scripts/build-tap.ps1   # builds dist/taskglass_tap.dll
 
 ## Usage
 
-Right-click the tray icon to enable or disable TaskGlass, pick a style or a theme, toggle the rules, start with Windows, or open the config and the log.
+Right-click the tray icon to enable or disable TaskGlass, pick a style or a theme, toggle the rules and the tray flyout, start with Windows, or open the config and the log.
 
 A minimal config that makes the bar clear, opaque when something is maximized, and a tinted blur in your editor:
 

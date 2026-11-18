@@ -12,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -25,7 +24,6 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/events"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
 	"github.com/AnderCMD/TaskGlass/internal/theme"
-	"github.com/AnderCMD/TaskGlass/internal/winglass"
 	"github.com/AnderCMD/TaskGlass/internal/xaml"
 )
 
@@ -49,7 +47,6 @@ type App struct {
 
 	systemLight atomic.Bool // Windows reports a light theme
 	mgr         *taskbar.Manager
-	glass       *winglass.Manager
 	xaml        *xaml.Controller // nil when the TAP DLL is unavailable
 	ev          *events.Watcher
 	kick        chan struct{} // asks the loop for an immediate update
@@ -63,8 +60,7 @@ type App struct {
 
 type menuItems struct {
 	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
-	surfTray, surfStart                                   *systray.MenuItem
-	presets                                               []*systray.MenuItem
+	surfTray                                              *systray.MenuItem
 	accents                                               map[config.Accent]*systray.MenuItem
 	themes                                                map[config.Theme]*systray.MenuItem
 }
@@ -72,7 +68,7 @@ type menuItems struct {
 // New creates an App with an already-loaded configuration.
 func New(o Options) *App {
 	exe, _ := os.Executable()
-	a := &App{Options: o, exe: exe, cfg: o.Config, mgr: taskbar.New(o.Log), glass: winglass.New(o.Log), kick: make(chan struct{}, 1)}
+	a := &App{Options: o, exe: exe, cfg: o.Config, mgr: taskbar.New(o.Log), kick: make(chan struct{}, 1)}
 	if st, err := os.Stat(o.CfgPath); err == nil {
 		a.modTime = st.ModTime()
 	}
@@ -200,7 +196,6 @@ func (a *App) updateTrayIcon(c config.Config) {
 func (a *App) loop(ctx context.Context) {
 	defer close(a.done)
 	defer a.mgr.Restore()
-	defer a.glass.Restore()
 	if a.xaml != nil {
 		if err := a.xaml.Start(); err != nil {
 			a.Log.Warn("xaml fix disabled", "err", err)
@@ -220,14 +215,10 @@ func (a *App) loop(ctx context.Context) {
 		c := a.snapshot()
 		if !a.safely(panics, func() {
 			styled := a.mgr.Tick(c, a.isLight(c))
-			a.glass.Tick(c)
 			if a.xaml != nil {
 				on := c.Enabled && c.XamlFix
 				a.xaml.SetHide(on && styled)
-				a.xaml.SetSurfaces(
-					xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, int(c.Surfaces.TrayOverflow.Opacity)),
-					xaml.Encode(on && c.Surfaces.StartMenu.Enabled, int(c.Surfaces.StartMenu.Opacity)),
-					0) // ShellExperienceHost support is groundwork only, see docs/architecture.md
+				a.xaml.SetOverflow(xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, int(c.Surfaces.TrayOverflow.Opacity)))
 			}
 		}) {
 			a.Log.Error("too many internal errors; restoring the taskbar and exiting")
@@ -368,7 +359,6 @@ func (a *App) syncMenu() {
 	check(m.start, c.StartMenu.Enabled)
 	check(m.xamlFix, c.XamlFix)
 	check(m.surfTray, c.Surfaces.TrayOverflow.Enabled)
-	check(m.surfStart, c.Surfaces.StartMenu.Enabled)
 	for k, it := range m.accents {
 		check(it, k == c.Default.Accent)
 	}
@@ -408,31 +398,7 @@ func (a *App) buildMenu(ctx context.Context) {
 	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
 	m.start = systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
 	m.hotkey = systray.AddMenuItemCheckbox("Global hotkey ("+c.Hotkey+")", "Toggle TaskGlass from anywhere; set the keys in the config file", c.HotkeyEnabled)
-	surfMenu := systray.AddMenuItem("Glass surfaces", "Translucent flyouts and windows; opacity is set in the config file")
-	m.surfTray = surfMenu.AddSubMenuItemCheckbox("Tray overflow flyout", "", c.Surfaces.TrayOverflow.Enabled)
-	m.surfStart = surfMenu.AddSubMenuItemCheckbox("Start menu", "", c.Surfaces.StartMenu.Enabled)
-	presetMenu := systray.AddMenuItem("Look preset", "Apply a complete look; your app rules, hotkey and theme are kept")
-	for _, pr := range config.Presets() {
-		it := presetMenu.AddSubMenuItem(strings.ToUpper(pr.Name[:1])+pr.Name[1:], pr.Description)
-		m.presets = append(m.presets, it)
-		name := pr.Name
-		go func(it *systray.MenuItem) {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case <-it.ClickedCh:
-					a.update(func(c *config.Config) {
-						if next, err := config.ApplyPreset(*c, name); err == nil {
-							*c = next
-						} else {
-							a.Log.Error("apply preset", "err", err)
-						}
-					})
-				}
-			}
-		}(it)
-	}
+	m.surfTray = systray.AddMenuItemCheckbox("Translucent tray flyout", "Make the hidden-icons flyout (the ^ button) translucent; opacity is set in the config file", c.Surfaces.TrayOverflow.Enabled)
 	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
 	if a.xaml == nil {
 		m.xamlFix.Disable()
@@ -468,7 +434,6 @@ func (a *App) buildMenu(ctx context.Context) {
 	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
 	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
 	spawn(m.surfTray.ClickedCh, flip(m.surfTray, func(c *config.Config, on bool) { c.Surfaces.TrayOverflow.Enabled = on }))
-	spawn(m.surfStart.ClickedCh, flip(m.surfStart, func(c *config.Config, on bool) { c.Surfaces.StartMenu.Enabled = on }))
 	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))
 	for ac, it := range m.accents {
 		ac := ac

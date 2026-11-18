@@ -8,7 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-blue.svg" alt="Licencia: MIT"></a>
 </p>
 
-TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
+TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos, y hace translúcido también el desplegable con los iconos ocultos de la bandeja. Solo hace eso. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
 
 [Read in English](README.md)
 
@@ -16,9 +16,8 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 
 - Estilos **Clear / Blur / Acrylic / Opaque / Normal**, incluida la transparencia total en la barra XAML de Windows 11 (sin relleno gris ni línea de borde)
 - **Modo claro y oscuro**: los colores `auto` y el icono de bandeja siguen a Windows en vivo
-- **Cristal más allá de la barra**: el desplegable de iconos de la bandeja y el menú Inicio pueden ser translúcidos, cada uno con su propia opacidad
-- **Looks con un comando**: `taskglass --preset liquid` (o el menú de bandeja) aplica un look completo de cristal esmerilado; incluye también `clear`, `subtle` y `stock`
-- **Reglas inteligentes**: opaca con una ventana maximizada, otro aspecto con el menú Inicio abierto, o por aplicación (`code.exe`, `chrome.exe`, ...), con ventana translúcida para cualquier app
+- **Desplegable de la bandeja translúcido**: el desplegable con los iconos ocultos (el botón `^`) tiene su propia opacidad
+- **Reglas inteligentes**: opaca con una ventana maximizada, otro aspecto con el menú Inicio abierto, o por aplicación (`code.exe`, `chrome.exe`, ...)
 - **Atajo global** para activar o desactivar el efecto (desactivado por defecto, se activa con un interruptor), e interruptor general
 - **Multimonitor**: cada barra por separado, o solo la principal
 - **Por eventos**: reacciona a eventos de ventana en lugar de sondear, cerca de 0 % de CPU en reposo

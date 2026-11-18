@@ -3,4 +3,3 @@ EXPORTS
   DllGetClassObject PRIVATE
   DllCanUnloadNow PRIVATE
   TaskGlassHookProc
-  TaskGlassGetMsgProc

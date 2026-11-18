@@ -37,7 +37,7 @@ func Resolve(c config.Config, ctx Context) (config.Appearance, Kind) {
 	}
 	if ctx.ForegroundExe != "" {
 		for _, r := range c.Apps {
-			if r.StylesTaskbar() && r.Matches(ctx.ForegroundExe) {
+			if r.Matches(ctx.ForegroundExe) {
 				return r.Appearance, KindApp
 			}
 		}
@@ -55,11 +55,5 @@ func NeedsWindowScan(c config.Config) (maximized, foreground bool) {
 	if !c.Enabled {
 		return false, false
 	}
-	fg := false
-	for _, r := range c.Apps {
-		if r.StylesTaskbar() {
-			fg = true
-		}
-	}
-	return c.Maximized.Enabled, fg
+	return c.Maximized.Enabled, len(c.Apps) > 0
 }

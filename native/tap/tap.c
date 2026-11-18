@@ -1,13 +1,13 @@
 /*
  * TaskGlass TAP: a tiny XAML Diagnostics "Tool Assembly Provider" loaded into
- * the shell processes whose XAML we want to change: explorer.exe (taskbar and
- * tray overflow flyout) and StartMenuExperienceHost.exe (Start menu).
+ * explorer.exe to change the XAML of the taskbar and of the tray overflow
+ * flyout.
  *
  * Windows 11 draws opaque or semi-transparent XAML backgrounds there that the
  * DWM accent cannot reach. This DLL finds them in the visual tree by name
- * (BackgroundFill / BackgroundStroke in the TaskbarFrame, the overflow flyout's
- * OverflowFlyoutBackgroundBorder, the Start menu's AcrylicBorder) and sets
- * their Opacity while TaskGlass asks for it, and back to 1 when it stops.
+ * (BackgroundFill / BackgroundStroke in the TaskbarFrame and the overflow
+ * flyout's OverflowFlyoutBackgroundBorder) and sets their Opacity while
+ * TaskGlass asks for it, and back to 1 when it stops.
  *
  * How it gets loaded (same scheme as TranslucentTB): TaskGlass installs a
  * WH_CALLWNDPROC hook (TaskGlassHookProc) on the taskbar's UI thread, which
@@ -18,16 +18,15 @@
  *
  * Control channel: a named shared memory block "Local\TaskGlass.Xaml.State.v1"
  * of 8 LONGs created by the TaskGlass process:
- *   [0] taskbar fill   TaskGlass -> TAP: 0 = leave alone, 1 = hide the fill
- *   [1] explorer status TAP -> TaskGlass: 0 = pending, 1 = attached, 2 = controlling, <0 = failure HRESULT
- *   [2] tray overflow flyout background   0 = leave alone, else 1 + opacity percent
- *   [3] Start menu surfaces               0 = leave alone, else 1 + opacity percent
- *   [7] set to 1 by the DLL once the tray overflow flyout is tracked
- *   [5] Start host status (same encoding as [1])
- * Older DLLs only read [0] and [1], so the block stays compatible.
- * plus a manual-reset event "Local\TaskGlass.Xaml.Ready" set once status is
- * final. If the block does not exist (TaskGlass exited or crashed) the mode is
- * 0, so the stock look always comes back by itself.
+ *   [0] taskbar fill     TaskGlass -> TAP: 0 = leave alone, 1 = hide the fill
+ *   [1] status           TAP -> TaskGlass: 0 = pending, 1 = attached, 2 = controlling, <0 = failure HRESULT
+ *   [2] tray flyout      TaskGlass -> TAP: 0 = leave alone, else 1 + opacity percent
+ *   [3..6] unused, always 0 (copies of the DLL from unreleased builds read them)
+ *   [7] flyout tracked   TAP -> TaskGlass: 1 once the tray overflow flyout is tracked
+ * Older DLLs only read [0] and [1], so the block stays compatible. A manual-reset
+ * event "Local\TaskGlass.Xaml.Ready" is set once status is final. If the block
+ * does not exist (TaskGlass exited or crashed) everything is left alone, so the
+ * stock look always comes back by itself.
  *
  * Threading: XAML objects may only be touched on the UI thread. The visual
  * tree callback already runs there; later mode changes are marshalled with
@@ -86,7 +85,7 @@ static const IID IID_IAgileObject_ = {0x94ea2b94, 0xe9cc, 0x49e0, {0xc0, 0xff, 0
 typedef HRESULT(STDMETHODCALLTYPE *PutOpacityFn)(void *self, double v);
 
 #define MAX_TRACKED 32
-enum { KIND_TASKBAR = 0, KIND_OVERFLOW = 1, KIND_START = 2, KIND_SHELL = 3 };
+enum { KIND_TASKBAR = 0, KIND_OVERFLOW = 1 };
 
 typedef struct {
     InstanceHandle handle;
@@ -121,11 +120,10 @@ static CRITICAL_SECTION g_list_cs;
 static Inst *g_insts;
 static int g_next_id = 1;
 #define NVALS 8
+#define STATUS_SLOT 1
+#define FOUND_SLOT 7
 static volatile LONG g_vals[NVALS]; /* last values read from the shared block */
-static int g_status_slot = 1;
-static const wchar_t *g_ready_name = L"Local\\TaskGlass.Xaml.Ready";
 static BOOL g_is_explorer;
-static int g_host; /* 1 explorer, 2 Start host, 3 ShellExperienceHost */
 static volatile LONG g_thread_started;
 static BOOL g_dump_cached;
 static DWORD g_dump_checked;
@@ -213,8 +211,8 @@ static void publish_slot(int slot, LONG status) {
 }
 
 static void publish_status(LONG status) {
-    publish_slot(g_status_slot, status);
-    HANDLE e = OpenEventW(EVENT_MODIFY_STATE, FALSE, g_ready_name);
+    publish_slot(STATUS_SLOT, status);
+    HANDLE e = OpenEventW(EVENT_MODIFY_STATE, FALSE, L"Local\\TaskGlass.Xaml.Ready");
     if (e) {
         SetEvent(e);
         CloseHandle(e);
@@ -232,9 +230,7 @@ static double wanted_opacity(int kind) {
     LONG v;
     switch (kind) {
     case KIND_TASKBAR: return g_vals[0] ? 0.0 : 1.0;
-    case KIND_OVERFLOW: v = g_vals[2]; break;
-    case KIND_SHELL: v = g_vals[4]; break;
-    default: v = g_vals[3]; break;
+    default: v = g_vals[2]; break; /* KIND_OVERFLOW */
     }
     if (v <= 0) return 1.0; /* leave alone */
     if (v > 101) v = 101;
@@ -323,32 +319,26 @@ static DWORD WINAPI poll_thread(LPVOID unused) {
         read_state(vals);
         /* status 2 = "controlling": republished so a restarted TaskGlass (new
          * shared block) learns about elements found by an earlier run. */
-        BOOL controlling = g_is_explorer ? any_tracked(KIND_TASKBAR) : any_tracked(-1);
-        if (controlling && g_state_exists && vals[g_status_slot] != 2) publish_slot(g_status_slot, 2);
-        /* slot 7: the tray overflow flyout is tracked (lets TaskGlass stop provoking events) */
-        if (g_host == 1 && g_state_exists && any_tracked(KIND_OVERFLOW) && vals[7] != 1) publish_slot(7, 1);
+        BOOL controlling = any_tracked(KIND_TASKBAR);
+        if (controlling && g_state_exists && vals[STATUS_SLOT] != 2) publish_slot(STATUS_SLOT, 2);
+        /* the tray overflow flyout is tracked: lets TaskGlass stop provoking events */
+        if (g_state_exists && any_tracked(KIND_OVERFLOW) && vals[FOUND_SLOT] != 1) publish_slot(FOUND_SLOT, 1);
         (void)last_status;
 
         if (g_state_exists) {
             was_alive = TRUE;
         } else if (was_alive) {
             was_alive = FALSE;
-            if (g_is_explorer) {
-                logf_(L"TaskGlass is gone: clearing the taskbar accent");
-                clear_all_accents();
-            } else {
-                logf_(L"TaskGlass is gone: restoring surfaces");
-            }
+            logf_(L"TaskGlass is gone: clearing the taskbar accent");
+            clear_all_accents();
         }
         BOOL changed = FALSE;
         for (int i = 0; i < NVALS; i++) {
-            if (i == 1 || i == 5 || i == 6 || i == 7) continue; /* status slots are ours */
+            if (i == STATUS_SLOT || i == FOUND_SLOT) continue; /* status slots are ours */
             if (vals[i] != g_vals[i]) { changed = TRUE; g_vals[i] = vals[i]; }
         }
         /* something is wanted but not found yet: keep looking every 3 s */
-        BOOL missing = g_host == 1 ? (g_vals[2] && !any_tracked(KIND_OVERFLOW))
-                       : g_host == 2 ? (g_vals[3] && !any_tracked(KIND_START))
-                                     : (g_vals[4] && !any_tracked(KIND_SHELL));
+        BOOL missing = g_vals[2] && !any_tracked(KIND_OVERFLOW);
         EnterCriticalSection(&g_list_cs);
         DWORD now = GetTickCount();
         for (Inst *in = g_insts; in; in = in->next) {
@@ -369,7 +359,7 @@ static DWORD WINAPI poll_thread(LPVOID unused) {
             }
         }
         LeaveCriticalSection(&g_list_cs);
-        if (changed) logf_(L"values -> %ld %ld %ld %ld", (long)g_vals[0], (long)g_vals[2], (long)g_vals[3], (long)g_vals[4]);
+        if (changed) logf_(L"values -> %ld %ld", (long)g_vals[0], (long)g_vals[2]);
         Sleep(150);
     }
     return 0;
@@ -408,11 +398,6 @@ static BOOL track(Inst *in, InstanceHandle handle, void *ui, int kind, const wch
     return TRUE;
 }
 
-/* Start menu: element names are filled in from tap.dump output of
- * StartMenuExperienceHost; see start_kind below. */
-static int start_kind(HSTRING name, const wchar_t **what, const wchar_t **cls);
-static int shell_kind(HSTRING name, const wchar_t **what, const wchar_t **cls);
-
 typedef struct {
     Inst *in;
     void *statics;
@@ -442,11 +427,14 @@ static void scan_node(Scan *sc, void *dep, int depth, BOOL in_frame) {
     int kind = -1;
     const wchar_t *what = NULL;
     const wchar_t *want_class = NULL;
-    if (g_is_explorer) {
-        if (frame && (fill || stroke)) { kind = KIND_TASKBAR; what = fill ? L"BackgroundFill" : L"BackgroundStroke"; want_class = L"Windows.UI.Xaml.Shapes.Rectangle"; }
-        else if (hs_eq(name, L"OverflowFlyoutBackgroundBorder")) { kind = KIND_OVERFLOW; what = L"OverflowFlyoutBackgroundBorder"; want_class = L"Windows.UI.Xaml.Controls.Border"; }
-    } else {
-        kind = g_host == 3 ? shell_kind(name, &what, &want_class) : start_kind(name, &what, &want_class);
+    if (frame && (fill || stroke)) {
+        kind = KIND_TASKBAR;
+        what = fill ? L"BackgroundFill" : L"BackgroundStroke";
+        want_class = L"Windows.UI.Xaml.Shapes.Rectangle";
+    } else if (hs_eq(name, L"OverflowFlyoutBackgroundBorder")) {
+        kind = KIND_OVERFLOW;
+        what = L"OverflowFlyoutBackgroundBorder";
+        want_class = L"Windows.UI.Xaml.Controls.Border";
     }
     if (name) WindowsDeleteString(name);
 
@@ -527,8 +515,7 @@ static void scan_all(Inst *in) {
     for (int j = 0; j < nroots; j++) IUnknown_Release((IUnknown *)roots[j]);
     if (found || g_dump) /* a failed scan repeats every few seconds: keep the log quiet */
         logf_(L"[%d] scan: %d anchor(s), %d tree(s), %d nodes, %d element(s) found", in->id, n, nroots, nodes, found);
-    if (found && g_is_explorer) publish_slot(1, 2);
-    else if (found) publish_slot(g_status_slot, 2);
+    if (found) publish_slot(STATUS_SLOT, 2);
     IUnknown_Release((IUnknown *)statics);
 }
 
@@ -695,8 +682,6 @@ static HINSTANCE g_inst;
 /* Hook procedure: its only job is to make Windows load this DLL into the
  * thread that owns the taskbar window. */
 LRESULT CALLBACK TaskGlassHookProc(int code, WPARAM w, LPARAM l) { return CallNextHookEx(NULL, code, w, l); }
-/* Same, for a WH_GETMESSAGE hook on a thread that owns no window. */
-LRESULT CALLBACK TaskGlassGetMsgProc(int code, WPARAM w, LPARAM l) { return CallNextHookEx(NULL, code, w, l); }
 
 typedef HRESULT(WINAPI *InitXamlDiagFn)(PCWSTR, DWORD, PCWSTR, PCWSTR, CLSID, PCWSTR);
 typedef struct {
@@ -761,16 +746,13 @@ static DWORD WINAPI install_thread(LPVOID unused) {
     return 0;
 }
 
-/* Which process are we loaded into? 1 = explorer, 2 = Start menu host, 0 = other. */
-static int host_kind(void) {
+/* Are we loaded into explorer.exe? (TaskGlass itself also loads this DLL to get
+ * the hook procedure's address, and must not start the installer.) */
+static BOOL host_is_explorer(void) {
     wchar_t exe[MAX_PATH];
-    if (!GetModuleFileNameW(NULL, exe, MAX_PATH)) return 0;
+    if (!GetModuleFileNameW(NULL, exe, MAX_PATH)) return FALSE;
     const wchar_t *base = wcsrchr(exe, L'\\');
-    if (!base) return 0;
-    if (_wcsicmp(base + 1, L"explorer.exe") == 0) return 1;
-    if (_wcsicmp(base + 1, L"StartMenuExperienceHost.exe") == 0) return 2;
-    if (_wcsicmp(base + 1, L"ShellExperienceHost.exe") == 0) return 3;
-    return 0;
+    return base && _wcsicmp(base + 1, L"explorer.exe") == 0;
 }
 
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
@@ -779,42 +761,11 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
         g_inst = inst;
         DisableThreadLibraryCalls(inst);
         InitializeCriticalSection(&g_list_cs);
-        /* The TaskGlass process also loads this DLL to get the hook procedure's
-         * address; only start the installer inside Explorer itself. */
-        int host = host_kind();
-        g_is_explorer = host == 1;
-        g_host = host;
-        if (host == 2) {
-            g_status_slot = 5;
-            g_ready_name = L"Local\\TaskGlass.Xaml.Ready.Start";
-        } else if (host == 3) {
-            g_status_slot = 6;
-            g_ready_name = L"Local\\TaskGlass.Xaml.Ready.Shell";
-        }
-        if (host != 0) {
+        g_is_explorer = host_is_explorer();
+        if (g_is_explorer) {
             HANDLE t = CreateThread(NULL, 0, install_thread, NULL, 0, NULL);
             if (t) CloseHandle(t);
         }
     }
     return TRUE;
-}
-
-/* Start menu surfaces (StartMenuExperienceHost). The names come from a
- * tap.dump of the real process on Windows 11 build 26300: the main menu and
- * the phone companion panel each have a Border "AcrylicBorder" whose child
- * "AcrylicOverlay" tints it. Hiding the parent fades both. */
-static int start_kind(HSTRING name, const wchar_t **what, const wchar_t **cls) {
-    if (hs_eq(name, L"AcrylicBorder")) {
-        *what = L"AcrylicBorder";
-        *cls = L"Windows.UI.Xaml.Controls.Border";
-        return KIND_START;
-    }
-    return -1;
-}
-
-/* ShellExperienceHost: notification centre, calendar, quick settings. Names are
- * filled in from a tap.dump of the real process. */
-static int shell_kind(HSTRING name, const wchar_t **what, const wchar_t **cls) {
-    (void)name; (void)what; (void)cls;
-    return -1;
 }
