@@ -394,27 +394,6 @@ const (
 	lwaAlpha    = 0x2
 )
 
-// FileExplorerWindows returns every visible top-level File Explorer window
-// (class CabinetWClass owned by explorer.exe).
-func FileExplorerWindows() []HWND {
-	var out []HWND
-	enumTopLevel(func(h HWND) bool {
-		if className(h) != "CabinetWClass" {
-			return true
-		}
-		if v, _, _ := procIsWindowVisible.Call(h); v == 0 {
-			return true
-		}
-		var pid uint32
-		procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
-		if processExe(pid) == "explorer.exe" {
-			out = append(out, h)
-		}
-		return true
-	})
-	return out
-}
-
 func exStyle(h HWND) uintptr {
 	r, _, _ := procGetWindowLongPtrW.Call(h, ^uintptr(19)) // GWL_EXSTYLE = -20
 	return r
@@ -468,7 +447,7 @@ func AppWindows(exe string) []HWND {
 		if v, _, _ := procIsWindowVisible.Call(h); v == 0 {
 			return true
 		}
-		if shellClasses[className(h)] {
+		if c := className(h); shellClasses[c] || c == "CabinetWClass" {
 			return true
 		}
 		if ex := exStyle(h); ex&wsExToolWindowF != 0 {

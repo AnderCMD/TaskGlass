@@ -164,7 +164,7 @@ func (a Appearance) RGB(light bool) (r, g, b uint8) {
 }
 
 // Surface controls the background opacity of a shell surface that accent
-// effects cannot reach (a flyout drawn by XAML inside Explorer or the Start
+// effects cannot reach (a flyout drawn by XAML inside the shell or the Start
 // menu host). It needs taskglass_tap.dll and xaml_fix.
 type Surface struct {
 	Enabled bool `json:"enabled"`
@@ -187,9 +187,9 @@ type Surfaces struct {
 	TrayOverflow Surface `json:"tray_overflow"`
 	// StartMenu is the Start menu flyout and its phone panel.
 	StartMenu Surface `json:"start_menu_flyout"`
-	// Explorer makes File Explorer windows uniformly translucent (the whole
-	// window, content included). It does not need taskglass_tap.dll.
-	Explorer Surface `json:"explorer"`
+	// LegacyExplorer is a key that existed in unreleased builds. It is still
+	// accepted so an old config keeps loading, ignored, and dropped on the next save.
+	LegacyExplorer json.RawMessage `json:"explorer,omitempty"`
 }
 
 // Rule is an Appearance that only applies when Enabled is true.
@@ -274,7 +274,6 @@ func Default() Config {
 		Surfaces: Surfaces{
 			TrayOverflow: Surface{Enabled: true, Opacity: 60},
 			StartMenu:    Surface{Enabled: true, Opacity: 60},
-			Explorer:     Surface{Enabled: true, Opacity: 85},
 		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
@@ -317,7 +316,7 @@ func (c Config) Validate() error {
 			return fmt.Errorf("%s: %w", k.name, err)
 		}
 	}
-	for name, sf := range map[string]Surface{"tray_overflow": c.Surfaces.TrayOverflow, "start_menu_flyout": c.Surfaces.StartMenu, "explorer": c.Surfaces.Explorer} {
+	for name, sf := range map[string]Surface{"tray_overflow": c.Surfaces.TrayOverflow, "start_menu_flyout": c.Surfaces.StartMenu} {
 		if err := sf.Validate(); err != nil {
 			return fmt.Errorf("surfaces.%s: %w", name, err)
 		}
@@ -504,6 +503,7 @@ func Save(path string, c Config) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
+	c.Surfaces.LegacyExplorer = nil // dropped for good on the first save
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err

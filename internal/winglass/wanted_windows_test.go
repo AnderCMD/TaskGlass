@@ -12,7 +12,6 @@ func pct(v int) *config.Percent { p := config.Percent(v); return &p }
 
 func TestWanted(t *testing.T) {
 	c := config.Default()
-	c.Surfaces.Explorer = config.Surface{Enabled: true, Opacity: 85}
 	c.Apps = []config.AppRule{
 		{Exe: "Code.exe", WindowOpacity: pct(90)},
 		{Exe: "code.exe", WindowOpacity: pct(10)},      // duplicate: the first rule wins
@@ -24,15 +23,10 @@ func TestWanted(t *testing.T) {
 		t.Fatalf("unexpected: %v", got)
 	}
 	c.Apps = nil
-	got = Wanted(c)
-	if got["explorer.exe"] != Alpha(85) || len(got) != 1 {
-		t.Fatalf("surface only: %v", got)
-	}
-	c.Surfaces.Explorer.Opacity = 100
 	if len(Wanted(c)) != 0 {
-		t.Fatal("100 % means untouched")
+		t.Fatal("no rules, nothing wanted")
 	}
-	c.Surfaces.Explorer.Opacity = 50
+	c.Apps = []config.AppRule{{Exe: "code.exe", WindowOpacity: pct(50)}}
 	c.Enabled = false
 	if len(Wanted(c)) != 0 {
 		t.Fatal("the master switch turns everything off")

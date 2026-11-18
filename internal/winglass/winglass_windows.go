@@ -1,14 +1,11 @@
 //go:build windows
 
-// Package winglass gives windows a uniform level of opacity: File Explorer
-// windows and the windows of applications listed in the config.
+// Package winglass gives the windows of applications listed in the config a
+// uniform level of opacity (the window_opacity of an app rule).
 //
-// Explorer draws its file list and navigation pane itself, so they ignore the
-// system backdrop; the title bar, tabs and command bar react to it but the
-// content does not. What does reach everything is the window-level alpha of a
-// layered window, which Windows applies to the whole window from outside the
-// owning process. That is what this package uses: no code is loaded into
-// the target processes.
+// It uses the window-level alpha of a layered window, which Windows applies to
+// the whole window from outside the owning process, so no code is loaded into
+// the target applications.
 package winglass
 
 import (
@@ -47,16 +44,13 @@ func Alpha(opacityPercent int) uint8 {
 	return uint8(opacityPercent * 255 / 100)
 }
 
-// Wanted returns the alpha every rule asks for, keyed by the lower-case
-// executable name ("explorer.exe" for File Explorer windows). Rules at 100 %
-// are left out. The first app rule for an executable wins.
+// Wanted returns the alpha every app rule asks for, keyed by the lower-case
+// executable name. Rules at 100 % are left out. The first rule for an
+// executable wins.
 func Wanted(c config.Config) map[string]uint8 {
 	out := map[string]uint8{}
 	if !c.Enabled {
 		return out
-	}
-	if c.Surfaces.Explorer.Enabled && c.Surfaces.Explorer.Opacity < 100 {
-		out["explorer.exe"] = Alpha(int(c.Surfaces.Explorer.Opacity))
 	}
 	seen := map[string]bool{}
 	for _, r := range c.Apps {
@@ -83,13 +77,7 @@ func (m *Manager) Tick(c config.Config) {
 	wanted := Wanted(c)
 	desired := map[winapi.HWND]uint8{}
 	for exe, alpha := range wanted {
-		var wins []winapi.HWND
-		if exe == "explorer.exe" {
-			wins = winapi.FileExplorerWindows()
-		} else {
-			wins = winapi.AppWindows(exe)
-		}
-		for _, h := range wins {
+		for _, h := range winapi.AppWindows(exe) {
 			desired[h] = alpha
 		}
 	}
@@ -125,14 +113,5 @@ func (m *Manager) Restore() {
 			winapi.ClearWindowAlpha(h, st.addedLayered)
 		}
 		delete(m.seen, h)
-	}
-}
-
-// RestoreAll makes every File Explorer window opaque, including ones changed
-// by an earlier TaskGlass process that was killed. File Explorer windows are
-// not layered by default, so this is safe to run at any time.
-func RestoreAll() {
-	for _, h := range winapi.FileExplorerWindows() {
-		winapi.ClearWindowAlpha(h, true)
 	}
 }

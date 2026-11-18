@@ -63,7 +63,7 @@ type App struct {
 
 type menuItems struct {
 	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
-	surfTray, surfStart, surfExplorer                     *systray.MenuItem
+	surfTray, surfStart                                   *systray.MenuItem
 	presets                                               []*systray.MenuItem
 	accents                                               map[config.Accent]*systray.MenuItem
 	themes                                                map[config.Theme]*systray.MenuItem
@@ -201,7 +201,6 @@ func (a *App) loop(ctx context.Context) {
 	defer close(a.done)
 	defer a.mgr.Restore()
 	defer a.glass.Restore()
-	winglass.RestoreAll() // windows left translucent by a TaskGlass that was killed
 	if a.xaml != nil {
 		if err := a.xaml.Start(); err != nil {
 			a.Log.Warn("xaml fix disabled", "err", err)
@@ -370,7 +369,6 @@ func (a *App) syncMenu() {
 	check(m.xamlFix, c.XamlFix)
 	check(m.surfTray, c.Surfaces.TrayOverflow.Enabled)
 	check(m.surfStart, c.Surfaces.StartMenu.Enabled)
-	check(m.surfExplorer, c.Surfaces.Explorer.Enabled)
 	for k, it := range m.accents {
 		check(it, k == c.Default.Accent)
 	}
@@ -413,7 +411,6 @@ func (a *App) buildMenu(ctx context.Context) {
 	surfMenu := systray.AddMenuItem("Glass surfaces", "Translucent flyouts and windows; opacity is set in the config file")
 	m.surfTray = surfMenu.AddSubMenuItemCheckbox("Tray overflow flyout", "", c.Surfaces.TrayOverflow.Enabled)
 	m.surfStart = surfMenu.AddSubMenuItemCheckbox("Start menu", "", c.Surfaces.StartMenu.Enabled)
-	m.surfExplorer = surfMenu.AddSubMenuItemCheckbox("File Explorer windows", "", c.Surfaces.Explorer.Enabled)
 	presetMenu := systray.AddMenuItem("Look preset", "Apply a complete look; your app rules, hotkey and theme are kept")
 	for _, pr := range config.Presets() {
 		it := presetMenu.AddSubMenuItem(strings.ToUpper(pr.Name[:1])+pr.Name[1:], pr.Description)
@@ -472,7 +469,6 @@ func (a *App) buildMenu(ctx context.Context) {
 	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
 	spawn(m.surfTray.ClickedCh, flip(m.surfTray, func(c *config.Config, on bool) { c.Surfaces.TrayOverflow.Enabled = on }))
 	spawn(m.surfStart.ClickedCh, flip(m.surfStart, func(c *config.Config, on bool) { c.Surfaces.StartMenu.Enabled = on }))
-	spawn(m.surfExplorer.ClickedCh, flip(m.surfExplorer, func(c *config.Config, on bool) { c.Surfaces.Explorer.Enabled = on }))
 	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))
 	for ac, it := range m.accents {
 		ac := ac

@@ -157,7 +157,7 @@
             "type": "number",
             "minimum": 0,
             "maximum": 100,
-            "description": "Makes every window of this application uniformly translucent while TaskGlass runs (100 = stock, never below 10 in practice). Content included. Optional."
+            "description": "Makes every window of this application uniformly translucent while TaskGlass runs (100 = stock; never below 10 in practice). Content included. Optional."
           }
         },
         "required": [
@@ -168,7 +168,7 @@
     "surfaces": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Shell surfaces whose own background can be made translucent. Each has enabled and opacity (100 = stock look, 0 = no background; File Explorer windows never go below 10).",
+      "description": "Shell surfaces whose own background can be made translucent. Each has enabled and opacity (100 = stock look, 0 = no background).",
       "properties": {
         "tray_overflow": {
           "$ref": "#/definitions/surface",
@@ -177,10 +177,6 @@
         "start_menu_flyout": {
           "$ref": "#/definitions/surface",
           "description": "The Start menu and its phone panel. Needs taskglass_tap.dll and xaml_fix; loads the helper DLL into StartMenuExperienceHost.exe."
-        },
-        "explorer": {
-          "$ref": "#/definitions/surface",
-          "description": "File Explorer windows, as a uniform window opacity (content included). Needs no DLL."
         }
       }
     },

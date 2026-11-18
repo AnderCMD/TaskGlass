@@ -45,7 +45,7 @@ func TestLiquidIsTranslucentEverywhere(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got.Default.Accent != AccentAcrylic || got.Surfaces.Explorer.Opacity >= 100 || got.Surfaces.StartMenu.Opacity >= 100 || got.Surfaces.TrayOverflow.Opacity >= 100 {
+	if got.Default.Accent != AccentAcrylic || got.Surfaces.StartMenu.Opacity >= 100 || got.Surfaces.TrayOverflow.Opacity >= 100 {
 		t.Fatalf("liquid should frost the taskbar and make every surface translucent: %+v", got)
 	}
 }

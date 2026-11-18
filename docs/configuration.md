@@ -26,8 +26,7 @@ Changes made from the tray menu are saved to this same file.
   ],
   "surfaces": {
     "tray_overflow":     { "enabled": true, "opacity": 60 },
-    "start_menu_flyout": { "enabled": true, "opacity": 60 },
-    "explorer":          { "enabled": true, "opacity": 85 }
+    "start_menu_flyout": { "enabled": true, "opacity": 60 }
   },
   "tray_icon": "auto",
   "hotkey_enabled": false,
@@ -72,7 +71,7 @@ Changes made from the tray menu are saved to this same file.
 A **rule** is an appearance plus `enabled`. An **app rule** has `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path), plus either or both of:
 
 - an appearance (`accent`, `color`, `opacity`), applied to the taskbar of the monitor where that application has focus;
-- `window_opacity` (0-100), which makes every window of the application uniformly translucent while TaskGlass runs, content included. It works from outside the application with the layered-window alpha, like the `explorer` surface; windows closed or no longer matching a rule are given back. If TaskGlass is killed, windows can stay translucent until they are closed. Dialogs, tool windows and tiny windows are left alone.
+- `window_opacity` (0-100), which makes every window of the application uniformly translucent while TaskGlass runs, content included. It works from outside the application with the layered-window alpha, so nothing is loaded into the application; windows closed or no longer matching a rule are given back. If TaskGlass is killed, windows can stay translucent until they are closed. Dialogs, tool windows and tiny windows are left alone.
 
 Opacity values accept decimals (`99.5`) and are rounded to a whole number.
 
@@ -89,8 +88,8 @@ The tray menu has a **Look preset** submenu doing the same. A running TaskGlass 
 
 | Preset | Look |
 |--------|------|
-| `liquid` | Frosted (acrylic) taskbar, translucent Start menu, tray flyout and Explorer windows. The closest to macOS-style glass that Windows allows. |
-| `clear` | Fully transparent taskbar, translucent flyout and Start menu, Explorer untouched. The default look of 1.0. |
+| `liquid` | Frosted (acrylic) taskbar, translucent Start menu and tray flyout. The closest to macOS-style glass that Windows allows. |
+| `clear` | Fully transparent taskbar, translucent flyout and Start menu. The default look of 1.0. |
 | `subtle` | Light blur on the taskbar, barely translucent shell. |
 | `stock` | Turns TaskGlass off (the stock Windows look). |
 
@@ -104,13 +103,11 @@ Real macOS "liquid glass" refracts what is behind it and adds specular highlight
 |---------|------------|-----|---------------|
 | `tray_overflow` | The flyout with hidden tray icons (the `^` button) | Its XAML background is made translucent | yes (`xaml_fix`) |
 | `start_menu_flyout` | The Start menu and its phone panel | The acrylic background of both is made translucent | yes (`xaml_fix`) |
-| `explorer` | File Explorer windows | The whole window (title bar, list, navigation pane) gets a uniform opacity | no |
 
 Notes:
 
 - `tray_overflow` and `start_menu_flyout` load `taskglass_tap.dll` into Explorer and into `StartMenuExperienceHost.exe`. `"xaml_fix": false` disables both, together with the taskbar fill removal.
 - At `0` the Start menu and the flyout lose their background (and its blur) completely, so text can be hard to read over busy wallpapers; `40`-`70` is usually nicer.
-- `explorer` is applied from outside Explorer, so it works even when Explorer runs each window in its own process. The value is clamped to at least `10`. If TaskGlass is killed, windows can stay translucent until you close them or run `taskglass --restore`; a normal exit restores them.
 - The tray menu has a **Glass surfaces** submenu to turn each on or off.
 
 ## Which rule wins
@@ -135,7 +132,7 @@ Colours set to `"auto"` and the `auto` tray icon follow Windows: switch Windows 
 | `--list-presets` | List the presets |
 | `--reset` | Rewrite the config with defaults and exit |
 | `--quit` | Ask the running TaskGlass to exit (restores the taskbar) |
-| `--restore` | Put the taskbar and File Explorer windows back to normal and exit |
+| `--restore` | Put the taskbar back to normal and exit |
 | `--verbose` | Also log to stderr |
 | `--version` | Print the version |
 

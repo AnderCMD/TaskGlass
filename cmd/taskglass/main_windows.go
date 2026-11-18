@@ -20,7 +20,6 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/app"
 	"github.com/AnderCMD/TaskGlass/internal/config"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
-	"github.com/AnderCMD/TaskGlass/internal/winglass"
 )
 
 // version is overridden at build time: -ldflags "-X main.version=1.2.3".
@@ -64,7 +63,6 @@ func main() {
 	}
 	if *restore {
 		taskbar.New(slog.New(slog.NewTextHandler(os.Stderr, nil))).Restore()
-		winglass.RestoreAll()
 		return
 	}
 	if *quit {

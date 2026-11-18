@@ -9,8 +9,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - **Glass surfaces** (`surfaces` in the config, **Glass surfaces** in the tray menu), each with its own opacity and enabled by default:
   - `tray_overflow`: the flyout with hidden tray icons.
   - `start_menu_flyout`: the Start menu and its phone panel (the helper DLL is now also loaded into `StartMenuExperienceHost.exe`, hooked through its UI threads because it owns no window while Start is closed).
-  - `explorer`: File Explorer windows, as a uniform window opacity (title bar, list and navigation pane). No injection; a normal exit and `--restore` give the windows back.
-- **Looks**: `taskglass --preset liquid|clear|subtle|stock`, `--list-presets` and a **Look preset** tray submenu. `liquid` frosts the taskbar and makes every surface translucent; presets keep your app rules, hotkey and theme.
+- **Looks**: `taskglass --preset liquid|clear|subtle|stock`, `--list-presets` and a **Look preset** tray submenu. `liquid` frosts the taskbar and makes the flyout and Start menu translucent; presets keep your app rules, hotkey and theme.
 - **Window opacity per application**: `window_opacity` in an app rule makes every window of that application uniformly translucent. A rule may use only `window_opacity` and no taskbar accent.
 - Opacity values accept decimals (`99.5`) and are rounded; `null` and out-of-range values are rejected with a clear message.
 - The shared-memory block grew to 8 slots (still readable by older DLLs). Groundwork for `ShellExperienceHost` (notification centre) is in the DLL and controller but not exposed: see `docs/architecture.md`.
@@ -21,8 +20,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 - The debug dump (`tap.dump`) can be switched on and off while the DLL is loaded.
 
 ### Known limitations
-- Menus, notifications, calendar and quick settings are not styled yet.
-- File Explorer's content is made translucent as a whole; there is no blur behind it.
+- Context menus, notifications, calendar and quick settings are not styled yet.
 - After updating TaskGlass, the tray overflow flyout is only picked up once Explorer restarts if it was already created before the new DLL attached.
 
 ## [1.0.1] - 2026-11-17

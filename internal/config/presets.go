@@ -22,7 +22,7 @@ func app(accent Accent, opacity Percent) Appearance {
 var presets = []Preset{
 	{
 		Name:        "liquid",
-		Description: "Frosted taskbar over the desktop, translucent menus, flyouts and Explorer windows (closest to macOS-style glass)",
+		Description: "Frosted taskbar over the desktop, translucent flyouts and Start menu (closest to macOS-style glass)",
 		apply: func(c *Config) {
 			c.Enabled = true
 			c.Default = app(AccentAcrylic, 28)
@@ -31,14 +31,13 @@ var presets = []Preset{
 			c.Surfaces = Surfaces{
 				TrayOverflow: Surface{Enabled: true, Opacity: 55},
 				StartMenu:    Surface{Enabled: true, Opacity: 55},
-				Explorer:     Surface{Enabled: true, Opacity: 88},
 			}
 			c.XamlFix = true
 		},
 	},
 	{
 		Name:        "clear",
-		Description: "Fully transparent taskbar, flyouts and Start menu translucent, Explorer untouched",
+		Description: "Fully transparent taskbar, translucent flyouts and Start menu",
 		apply: func(c *Config) {
 			c.Enabled = true
 			c.Default = app(AccentClear, 0)
@@ -47,7 +46,6 @@ var presets = []Preset{
 			c.Surfaces = Surfaces{
 				TrayOverflow: Surface{Enabled: true, Opacity: 60},
 				StartMenu:    Surface{Enabled: true, Opacity: 60},
-				Explorer:     Surface{Enabled: false, Opacity: 85},
 			}
 			c.XamlFix = true
 		},
@@ -63,7 +61,6 @@ var presets = []Preset{
 			c.Surfaces = Surfaces{
 				TrayOverflow: Surface{Enabled: true, Opacity: 85},
 				StartMenu:    Surface{Enabled: true, Opacity: 88},
-				Explorer:     Surface{Enabled: true, Opacity: 96},
 			}
 			c.XamlFix = true
 		},

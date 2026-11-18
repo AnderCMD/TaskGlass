@@ -16,7 +16,7 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 
 - Estilos **Clear / Blur / Acrylic / Opaque / Normal**, incluida la transparencia total en la barra XAML de Windows 11 (sin relleno gris ni línea de borde)
 - **Modo claro y oscuro**: los colores `auto` y el icono de bandeja siguen a Windows en vivo
-- **Cristal más allá de la barra**: el desplegable de iconos de la bandeja, el menú Inicio y las ventanas del Explorador pueden ser translúcidos, cada uno con su propia opacidad
+- **Cristal más allá de la barra**: el desplegable de iconos de la bandeja y el menú Inicio pueden ser translúcidos, cada uno con su propia opacidad
 - **Looks con un comando**: `taskglass --preset liquid` (o el menú de bandeja) aplica un look completo de cristal esmerilado; incluye también `clear`, `subtle` y `stock`
 - **Reglas inteligentes**: opaca con una ventana maximizada, otro aspecto con el menú Inicio abierto, o por aplicación (`code.exe`, `chrome.exe`, ...), con ventana translúcida para cualquier app
 - **Atajo global** para activar o desactivar el efecto (desactivado por defecto, se activa con un interruptor), e interruptor general
@@ -70,12 +70,11 @@ Para quitar ese relleno, `taskglass_tap.dll` se carga dentro de `explorer.exe` m
 - Depende de funciones internas no documentadas de Windows. Una actualización puede romperlo; en ese caso la app sigue con efectos de acento (tintes y desenfoque) y registra el motivo.
 - Cargar código en Explorer es lo que las herramientas de seguridad llaman "inyección", y algunos antivirus pueden avisar. La DLL es pequeña y su código está en [native/tap](native/tap); puedes compilarla tú. Con `"xaml_fix": false` nunca se toca Explorer.
 - Verificado en Windows 11 compilación 26300 con un monitor y ocultado automático. Windows 10 (sin barra XAML) solo necesita la API de acento y no está probado; multimonitor tampoco. [Abre un issue](https://github.com/AnderCMD/TaskGlass/issues) indicando tu versión de Windows si algo se ve mal.
-- Las ventanas del Explorador de archivos reciben una opacidad uniforme (texto incluido), no desenfoque: el Explorador dibuja su contenido por su cuenta. Tras *actualizar* TaskGlass, el desplegable de la bandeja puede necesitar reiniciar el Explorador para detectarse. Detalles en [docs/configuration.md](docs/configuration.md#glass-surfaces).
+- Tras *actualizar* TaskGlass, el desplegable de la bandeja puede necesitar reiniciar el Explorador para detectarse. Detalles en [docs/configuration.md](docs/configuration.md#glass-surfaces).
 - Si la barra se ve mal: `taskglass.exe --restore`, o reinicia Explorer.
 
 ## Hoja de ruta
 
-- Desenfoque tras el contenido del Explorador de archivos
 - Verificación en Windows 10 y multimonitor
 - Paquete winget
 
