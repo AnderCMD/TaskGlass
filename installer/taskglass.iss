@@ -8,6 +8,9 @@
   #define DistDir "..\dist"
 #endif
 
+; Windows version resources only accept N.N.N.N, so strip any suffix like -ci.
+#define NumericVersion Copy(AppVersion, 1, Pos("-", AppVersion + "-") - 1)
+
 #define AppName "TaskGlass"
 #define AppExe "taskglass.exe"
 
@@ -38,7 +41,7 @@ SolidCompression=yes
 WizardStyle=modern
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#NumericVersion}
 VersionInfoProductName={#AppName}
 
 [Languages]
