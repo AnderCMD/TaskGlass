@@ -90,4 +90,4 @@ Ver [CONTRIBUTING.md](CONTRIBUTING.md). Seguridad: [SECURITY.md](SECURITY.md).
 
 ## Licencia
 
-[Apache License 2.0](LICENSE). Ver también [NOTICE](NOTICE).
+[Apache 2.0](LICENSE)

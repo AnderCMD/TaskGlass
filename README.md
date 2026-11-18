@@ -90,4 +90,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.
 
 ## License
 
-[Apache License 2.0](LICENSE). See also [NOTICE](NOTICE).
+[Apache 2.0](LICENSE)

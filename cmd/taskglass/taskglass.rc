@@ -21,7 +21,7 @@ BEGIN
             VALUE "FileDescription", "TaskGlass - transparent taskbar for Windows"
             VALUE "FileVersion", "1.1.0.0"
             VALUE "InternalName", "taskglass"
-            VALUE "LegalCopyright", "Copyright 2026 AnderCMD. Apache License 2.0."
+            VALUE "LegalCopyright", "Copyright (c) 2026 AnderCMD. Apache 2.0 License."
             VALUE "OriginalFilename", "taskglass.exe"
             VALUE "ProductName", "TaskGlass"
             VALUE "ProductVersion", "1.1.0"
