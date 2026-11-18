@@ -1,18 +1,21 @@
 //go:build windows
 
-// Package winglass gives File Explorer windows a uniform level of opacity.
+// Package winglass gives windows a uniform level of opacity: File Explorer
+// windows and the windows of applications listed in the config.
 //
 // Explorer draws its file list and navigation pane itself, so they ignore the
 // system backdrop; the title bar, tabs and command bar react to it but the
 // content does not. What does reach everything is the window-level alpha of a
 // layered window, which Windows applies to the whole window from outside the
 // owning process. That is what this package uses: no code is loaded into
-// Explorer.
+// the target processes.
 package winglass
 
 import (
 	"log/slog"
+	"strings"
 
+	"github.com/AnderCMD/TaskGlass/internal/config"
 	"github.com/AnderCMD/TaskGlass/internal/winapi"
 )
 
@@ -21,7 +24,7 @@ type state struct {
 	alpha        uint8 // last alpha applied
 }
 
-// Manager applies and restores the opacity of File Explorer windows.
+// Manager applies and restores window opacity.
 type Manager struct {
 	log  *slog.Logger
 	seen map[winapi.HWND]state
@@ -44,17 +47,53 @@ func Alpha(opacityPercent int) uint8 {
 	return uint8(opacityPercent * 255 / 100)
 }
 
-// Tick applies the opacity to every File Explorer window when enabled, and
-// gives windows back when it is disabled or at 100 %.
-func (m *Manager) Tick(enabled bool, opacityPercent int) {
-	if !enabled || opacityPercent >= 100 {
-		m.Restore()
-		return
+// Wanted returns the alpha every rule asks for, keyed by the lower-case
+// executable name ("explorer.exe" for File Explorer windows). Rules at 100 %
+// are left out. The first app rule for an executable wins.
+func Wanted(c config.Config) map[string]uint8 {
+	out := map[string]uint8{}
+	if !c.Enabled {
+		return out
 	}
-	alpha := Alpha(opacityPercent)
-	live := map[winapi.HWND]bool{}
-	for _, h := range winapi.FileExplorerWindows() {
-		live[h] = true
+	if c.Surfaces.Explorer.Enabled && c.Surfaces.Explorer.Opacity < 100 {
+		out["explorer.exe"] = Alpha(int(c.Surfaces.Explorer.Opacity))
+	}
+	seen := map[string]bool{}
+	for _, r := range c.Apps {
+		exe := strings.ToLower(strings.TrimSpace(r.Exe))
+		if seen[exe] {
+			continue
+		}
+		seen[exe] = true
+		if r.WindowOpacity == nil {
+			continue
+		}
+		if *r.WindowOpacity >= 100 {
+			delete(out, exe)
+			continue
+		}
+		out[exe] = Alpha(int(*r.WindowOpacity))
+	}
+	return out
+}
+
+// Tick applies the wanted opacity to the matching windows and gives back the
+// windows that no longer match any rule.
+func (m *Manager) Tick(c config.Config) {
+	wanted := Wanted(c)
+	desired := map[winapi.HWND]uint8{}
+	for exe, alpha := range wanted {
+		var wins []winapi.HWND
+		if exe == "explorer.exe" {
+			wins = winapi.FileExplorerWindows()
+		} else {
+			wins = winapi.AppWindows(exe)
+		}
+		for _, h := range wins {
+			desired[h] = alpha
+		}
+	}
+	for h, alpha := range desired {
 		st, ok := m.seen[h]
 		if ok && st.alpha == alpha {
 			continue
@@ -70,8 +109,10 @@ func (m *Manager) Tick(enabled bool, opacityPercent int) {
 		m.seen[h] = st
 	}
 	for h, st := range m.seen {
-		if !live[h] { // closed or hidden: nothing to give back
-			_ = st
+		if _, still := desired[h]; !still {
+			if winapi.IsWindow(h) { // rule removed or app closed: give the window back
+				winapi.ClearWindowAlpha(h, st.addedLayered)
+			}
 			delete(m.seen, h)
 		}
 	}
@@ -80,7 +121,9 @@ func (m *Manager) Tick(enabled bool, opacityPercent int) {
 // Restore makes every window we touched opaque again.
 func (m *Manager) Restore() {
 	for h, st := range m.seen {
-		winapi.ClearWindowAlpha(h, st.addedLayered)
+		if winapi.IsWindow(h) {
+			winapi.ClearWindowAlpha(h, st.addedLayered)
+		}
 		delete(m.seen, h)
 	}
 }

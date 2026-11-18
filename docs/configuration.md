@@ -21,7 +21,8 @@ Changes made from the tray menu are saved to this same file.
   "maximized":  { "enabled": true,  "accent": "opaque",  "color": "auto", "opacity": 100 },
   "start_menu": { "enabled": false, "accent": "acrylic", "color": "auto", "opacity": 60 },
   "apps": [
-    { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
+    { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 },
+    { "exe": "chrome.exe", "window_opacity": 92 }
   ],
   "surfaces": {
     "tray_overflow":     { "enabled": true, "opacity": 60 },
@@ -49,7 +50,7 @@ Changes made from the tray menu are saved to this same file.
 | `default` | appearance | Used when no other rule matches. |
 | `maximized` | rule | Applies on a monitor that has a maximized window. |
 | `start_menu` | rule | Applies while the Start menu or Search has focus. |
-| `apps` | list of app rules | Applies while the named application has focus (max 64, first match wins). |
+| `apps` | list of app rules | Per-application rules (max 64, first match wins): restyle the taskbar while the app has focus and/or make its windows translucent with `window_opacity`. |
 | `surfaces` | object | Translucent shell surfaces, see [Glass surfaces](#glass-surfaces). |
 | `tray_icon` | `auto`, `color`, `light`, `dark` | Notification-area icon. `auto` is a monochrome glyph that contrasts with the Windows theme; `color` is the full logo. |
 | `hotkey_enabled` | bool | Turns the global hotkey on. **Off by default**, so TaskGlass never grabs a shortcut you did not ask for. Also in the tray menu (**Global hotkey**). |
@@ -68,7 +69,32 @@ Changes made from the tray menu are saved to this same file.
 | `color` | `#RRGGBB` or `auto` | Tint colour. `auto` follows the theme: `#1C1C1C` in dark mode, `#F3F3F3` in light mode (matching the stock taskbar). |
 | `opacity` | 0-100 | Tint opacity in percent. |
 
-A **rule** is an appearance plus `enabled`. An **app rule** is an appearance plus `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path). An app rule applies to the taskbar of the monitor where that application has focus.
+A **rule** is an appearance plus `enabled`. An **app rule** has `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path), plus either or both of:
+
+- an appearance (`accent`, `color`, `opacity`), applied to the taskbar of the monitor where that application has focus;
+- `window_opacity` (0-100), which makes every window of the application uniformly translucent while TaskGlass runs, content included. It works from outside the application with the layered-window alpha, like the `explorer` surface; windows closed or no longer matching a rule are given back. If TaskGlass is killed, windows can stay translucent until they are closed. Dialogs, tool windows and tiny windows are left alone.
+
+Opacity values accept decimals (`99.5`) and are rounded to a whole number.
+
+## Presets
+
+A preset sets the whole look in one go. It replaces the taskbar appearances, the `maximized` and `start_menu` rules and the `surfaces`, and keeps your app rules, hotkey, theme and everything else.
+
+```bash
+taskglass --list-presets
+taskglass --preset liquid
+```
+
+The tray menu has a **Look preset** submenu doing the same. A running TaskGlass picks the change up within a second.
+
+| Preset | Look |
+|--------|------|
+| `liquid` | Frosted (acrylic) taskbar, translucent Start menu, tray flyout and Explorer windows. The closest to macOS-style glass that Windows allows. |
+| `clear` | Fully transparent taskbar, translucent flyout and Start menu, Explorer untouched. The default look of 1.0. |
+| `subtle` | Light blur on the taskbar, barely translucent shell. |
+| `stock` | Turns TaskGlass off (the stock Windows look). |
+
+Real macOS "liquid glass" refracts what is behind it and adds specular highlights. Windows exposes no way to add that to other programs, so `liquid` approximates it with blur, transparency and theme-aware tints.
 
 ## Glass surfaces
 
@@ -105,6 +131,8 @@ Colours set to `"auto"` and the `auto` tray icon follow Windows: switch Windows 
 |------|---------|
 | `--config <path>` | Use a custom config file |
 | `--validate` | Check the config and exit; non-zero on errors |
+| `--preset <name>` | Apply a look (`liquid`, `clear`, `subtle`, `stock`) and exit |
+| `--list-presets` | List the presets |
 | `--reset` | Rewrite the config with defaults and exit |
 | `--quit` | Ask the running TaskGlass to exit (restores the taskbar) |
 | `--restore` | Put the taskbar and File Explorer windows back to normal and exit |

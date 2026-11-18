@@ -24,6 +24,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -47,7 +48,9 @@ const (
 	slotExplorer = 1 // TAP -> TaskGlass: explorer status (1 attached, 2 controlling, <0 failed)
 	slotOverflow = 2 // TaskGlass -> TAP: tray overflow flyout, see Encode
 	slotStart    = 3 // TaskGlass -> TAP: Start menu surfaces, see Encode
+	slotShell    = 4 // TaskGlass -> TAP: notification centre, calendar, quick settings
 	slotStartSt  = 5 // TAP -> TaskGlass: Start host status
+	slotShellSt  = 6 // TAP -> TaskGlass: ShellExperienceHost status
 	numSlots     = 8
 )
 
@@ -72,15 +75,16 @@ const injectTimeout = 35 * time.Second
 
 // target is a process whose XAML tree the TAP is loaded into.
 type target struct {
-	name      string
-	readyName string
-	slot      int // status slot
-	ready     windows.Handle
-	find      func() (hwnd winapi.HWND, tid, pid uint32, ok bool)
-	needed    func(c *Controller) bool
-	hookProc  string // exported name of the hook procedure in the DLL
-	getMsg    bool   // WH_GETMESSAGE on GUI threads instead of WH_CALLWNDPROC on a window
-	threads   func() (pid uint32, tids []uint32, ok bool)
+	name         string
+	readyName    string
+	slot         int // status slot
+	ready        windows.Handle
+	find         func() (hwnd winapi.HWND, tid, pid uint32, ok bool)
+	needed       func(c *Controller) bool
+	hookProc     string // exported name of the hook procedure in the DLL
+	getMsg       bool   // WH_GETMESSAGE on GUI threads instead of WH_CALLWNDPROC on a window
+	threads      func() (pid uint32, tids []uint32, ok bool)
+	appContainer bool // the process is an AppContainer: the DLL must live where it can read it
 
 	pid     uint32 // pid we last attached to
 	failLog string
@@ -143,6 +147,19 @@ func New(log *slog.Logger, dllPath string) *Controller {
 			},
 			needed: func(c *Controller) bool { return c.load(slotStart) != 0 },
 		},
+		{
+			name: "shell", readyName: `Local\TaskGlass.Xaml.Ready.Shell`, slot: slotShellSt,
+			getMsg: true, hookProc: "TaskGlassGetMsgProc", appContainer: true,
+			threads: func() (uint32, []uint32, bool) { return winapi.ProcessGUIThreads("ShellExperienceHost.exe") },
+			find: func() (winapi.HWND, uint32, uint32, bool) {
+				pid, tids, ok := winapi.ProcessGUIThreads("ShellExperienceHost.exe")
+				if !ok {
+					return 0, 0, 0, false
+				}
+				return 0, tids[0], pid, true
+			},
+			needed: func(c *Controller) bool { return c.load(slotShell) != 0 },
+		},
 	}
 	return c
 }
@@ -199,13 +216,14 @@ func (c *Controller) SetHide(hide bool) {
 	c.store(slotHide, v)
 }
 
-// SetSurfaces sets the tray overflow and Start menu surfaces (see Encode).
-func (c *Controller) SetSurfaces(overflow, start int32) {
+// SetSurfaces sets the tray overflow, Start menu and shell panels (see Encode).
+func (c *Controller) SetSurfaces(overflow, start, shell int32) {
 	if c.vals == nil {
 		return
 	}
 	c.store(slotOverflow, overflow)
 	c.store(slotStart, start)
+	c.store(slotShell, shell)
 }
 
 // Stop restores everything, gives the TAP time to notice, and releases
@@ -215,7 +233,7 @@ func (c *Controller) Stop() {
 		return
 	}
 	c.SetHide(false)
-	c.SetSurfaces(0, 0)
+	c.SetSurfaces(0, 0, 0)
 	c.cancel()
 	<-c.done
 	time.Sleep(500 * time.Millisecond) // TAP polls every 150 ms, then dispatches to the UI thread
@@ -266,7 +284,7 @@ func (c *Controller) ensureInjected(ctx context.Context, t *target) {
 	if pid == t.pid {
 		return
 	}
-	path, err := stage(c.dllPath)
+	path, err := stage(c.dllPath, t.appContainer)
 	if err == nil {
 		err = c.inject(ctx, t, hwnd, tid, pid, path)
 	}
@@ -309,7 +327,7 @@ func (c *Controller) awaitFills(ctx context.Context) {
 
 // stage copies the DLL to a content-addressed path under the user cache so
 // that an updated DLL never collides with a copy a process still has loaded.
-func stage(src string) (string, error) {
+func stage(src string, appContainer bool) (string, error) {
 	f, err := os.Open(src)
 	if err != nil {
 		return "", err
@@ -325,12 +343,20 @@ func stage(src string) (string, error) {
 		return "", err
 	}
 	dir = filepath.Join(dir, "TaskGlass", "tap")
+	if appContainer {
+		// AppContainer processes cannot read the user profile; ProgramData is
+		// readable once ALL APPLICATION PACKAGES is granted on the file.
+		dir = filepath.Join(os.Getenv("ProgramData"), "TaskGlass", "tap")
+	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
 	dst := filepath.Join(dir, "taskglass_tap_"+sum+".dll")
 	if _, err := os.Stat(dst); err == nil {
 		return dst, nil
+	}
+	if appContainer {
+		defer grantAppContainerRead(dir, dst)
 	}
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
 		return "", err
@@ -445,4 +471,13 @@ func moduleLoaded(pid uint32, name string) bool {
 		}
 	}
 	return false
+}
+
+// grantAppContainerRead lets AppContainer processes read the staged DLL: it
+// grants "ALL APPLICATION PACKAGES" (S-1-15-2-1) read and execute on the file
+// and on its folder.
+func grantAppContainerRead(dir, file string) {
+	for _, p := range []string{dir, file} {
+		_ = exec.Command("icacls", p, "/grant", "*S-1-15-2-1:(RX)").Run()
+	}
 }

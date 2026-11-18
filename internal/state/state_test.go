@@ -93,3 +93,20 @@ func TestNeedsWindowScan(t *testing.T) {
 		t.Fatal("disabled config needs no scan")
 	}
 }
+
+func TestWindowOnlyAppRuleNeverRestylesTheTaskbar(t *testing.T) {
+	c := config.Default()
+	c.Maximized.Enabled = false
+	op := config.Percent(80)
+	c.Apps = []config.AppRule{{Exe: "code.exe", WindowOpacity: &op}}
+	if _, kind := Resolve(c, Context{ForegroundExe: "code.exe"}); kind != KindDefault {
+		t.Fatalf("got %s, want default", kind)
+	}
+	if _, fg := NeedsWindowScan(c); fg {
+		t.Fatal("a window-only rule needs no foreground tracking")
+	}
+	c.Apps = append(c.Apps, config.AppRule{Exe: "code.exe", Appearance: config.Appearance{Accent: config.AccentBlur, Color: "auto", Opacity: 30}})
+	if _, kind := Resolve(c, Context{ForegroundExe: "code.exe"}); kind != KindApp {
+		t.Fatalf("got %s, want app", kind)
+	}
+}

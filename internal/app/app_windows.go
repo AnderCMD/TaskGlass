@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -63,6 +64,7 @@ type App struct {
 type menuItems struct {
 	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
 	surfTray, surfStart, surfExplorer                     *systray.MenuItem
+	presets                                               []*systray.MenuItem
 	accents                                               map[config.Accent]*systray.MenuItem
 	themes                                                map[config.Theme]*systray.MenuItem
 }
@@ -219,13 +221,14 @@ func (a *App) loop(ctx context.Context) {
 		c := a.snapshot()
 		if !a.safely(panics, func() {
 			styled := a.mgr.Tick(c, a.isLight(c))
-			a.glass.Tick(c.Enabled && c.Surfaces.Explorer.Enabled, c.Surfaces.Explorer.Opacity)
+			a.glass.Tick(c)
 			if a.xaml != nil {
 				on := c.Enabled && c.XamlFix
 				a.xaml.SetHide(on && styled)
 				a.xaml.SetSurfaces(
-					xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, c.Surfaces.TrayOverflow.Opacity),
-					xaml.Encode(on && c.Surfaces.StartMenu.Enabled, c.Surfaces.StartMenu.Opacity))
+					xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, int(c.Surfaces.TrayOverflow.Opacity)),
+					xaml.Encode(on && c.Surfaces.StartMenu.Enabled, int(c.Surfaces.StartMenu.Opacity)),
+					0) // ShellExperienceHost support is groundwork only, see docs/architecture.md
 			}
 		}) {
 			a.Log.Error("too many internal errors; restoring the taskbar and exiting")
@@ -411,6 +414,28 @@ func (a *App) buildMenu(ctx context.Context) {
 	m.surfTray = surfMenu.AddSubMenuItemCheckbox("Tray overflow flyout", "", c.Surfaces.TrayOverflow.Enabled)
 	m.surfStart = surfMenu.AddSubMenuItemCheckbox("Start menu", "", c.Surfaces.StartMenu.Enabled)
 	m.surfExplorer = surfMenu.AddSubMenuItemCheckbox("File Explorer windows", "", c.Surfaces.Explorer.Enabled)
+	presetMenu := systray.AddMenuItem("Look preset", "Apply a complete look; your app rules, hotkey and theme are kept")
+	for _, pr := range config.Presets() {
+		it := presetMenu.AddSubMenuItem(strings.ToUpper(pr.Name[:1])+pr.Name[1:], pr.Description)
+		m.presets = append(m.presets, it)
+		name := pr.Name
+		go func(it *systray.MenuItem) {
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-it.ClickedCh:
+					a.update(func(c *config.Config) {
+						if next, err := config.ApplyPreset(*c, name); err == nil {
+							*c = next
+						} else {
+							a.Log.Error("apply preset", "err", err)
+						}
+					})
+				}
+			}
+		}(it)
+	}
 	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
 	if a.xaml == nil {
 		m.xamlFix.Disable()

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -122,11 +123,31 @@ const (
 	autoLight = "#F3F3F3"
 )
 
+// Percent is a value from 0 to 100. In JSON it may be written with decimals
+// ("opacity": 99.5); it is rounded to the nearest whole number.
+type Percent int
+
+// UnmarshalJSON accepts any JSON number and rounds it.
+func (p *Percent) UnmarshalJSON(b []byte) error {
+	if string(bytes.TrimSpace(b)) == "null" {
+		return errors.New("must be a number between 0 and 100, not null")
+	}
+	var f float64
+	if err := json.Unmarshal(b, &f); err != nil {
+		return fmt.Errorf("must be a number between 0 and 100: %w", err)
+	}
+	if math.IsNaN(f) || math.IsInf(f, 0) || f < -1e6 || f > 1e6 {
+		return fmt.Errorf("%v is not a valid percentage", f)
+	}
+	*p = Percent(math.Round(f))
+	return nil
+}
+
 // Appearance describes how the taskbar should look in a given state.
 type Appearance struct {
-	Accent  Accent `json:"accent"`
-	Color   string `json:"color"`   // "#RRGGBB" or "auto"
-	Opacity int    `json:"opacity"` // 0 (invisible) .. 100 (fully opaque)
+	Accent  Accent  `json:"accent"`
+	Color   string  `json:"color"`   // "#RRGGBB" or "auto"
+	Opacity Percent `json:"opacity"` // 0 (invisible) .. 100 (fully opaque)
 }
 
 // RGB returns the tint colour for the given theme.
@@ -149,7 +170,7 @@ type Surface struct {
 	Enabled bool `json:"enabled"`
 	// Opacity of the surface background: 100 is the stock look, 0 removes the
 	// background entirely.
-	Opacity int `json:"opacity"`
+	Opacity Percent `json:"opacity"`
 }
 
 // Validate checks a surface.
@@ -182,6 +203,10 @@ type AppRule struct {
 	// Exe is the executable file name, matched case-insensitively
 	// (for example "chrome.exe").
 	Exe string `json:"exe"`
+	// WindowOpacity, when set, makes the application's own windows uniformly
+	// translucent while TaskGlass runs (100 = stock). It is independent of the
+	// taskbar appearance below.
+	WindowOpacity *Percent `json:"window_opacity,omitempty"`
 	Appearance
 }
 
@@ -354,8 +379,22 @@ func (r AppRule) Validate() error {
 	if strings.ContainsAny(exe, `\/:*?"<>|`) {
 		return fmt.Errorf("exe %q must be a bare file name like chrome.exe", r.Exe)
 	}
+	if r.WindowOpacity != nil && (*r.WindowOpacity < 0 || *r.WindowOpacity > 100) {
+		return fmt.Errorf("window_opacity %d out of range [0, 100]", *r.WindowOpacity)
+	}
+	if r.Accent == "" {
+		// a window-opacity-only rule: the taskbar appearance is not used
+		if r.WindowOpacity == nil {
+			return errors.New("needs an accent or a window_opacity")
+		}
+		return nil
+	}
 	return r.Appearance.Validate()
 }
+
+// StylesTaskbar reports whether the rule changes the taskbar appearance (as
+// opposed to only the application's window opacity).
+func (r AppRule) StylesTaskbar() bool { return r.Accent != "" }
 
 // Matches reports whether the rule applies to the executable file name exe.
 func (r AppRule) Matches(exe string) bool {

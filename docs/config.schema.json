@@ -8,7 +8,13 @@
   "definitions": {
     "accent": {
       "type": "string",
-      "enum": ["clear", "blur", "acrylic", "opaque", "normal"],
+      "enum": [
+        "clear",
+        "blur",
+        "acrylic",
+        "opaque",
+        "normal"
+      ],
       "description": "clear: fully transparent. blur: gaussian blur with a tint. acrylic: blur plus noise. opaque: solid colour. normal: leave the stock Windows taskbar."
     },
     "color": {
@@ -17,51 +23,86 @@
       "description": "#RRGGBB, or \"auto\" to follow the Windows theme (dark: #1C1C1C, light: #F3F3F3)."
     },
     "opacity": {
-      "type": "integer",
+      "type": "number",
       "minimum": 0,
       "maximum": 100,
-      "description": "Tint opacity in percent."
+      "description": "Opacity in percent. Decimals are allowed and rounded to the nearest whole number."
     },
     "appearance": {
       "type": "object",
       "properties": {
-        "accent": { "$ref": "#/definitions/accent" },
-        "color": { "$ref": "#/definitions/color" },
-        "opacity": { "$ref": "#/definitions/opacity" }
+        "accent": {
+          "$ref": "#/definitions/accent"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "opacity": {
+          "$ref": "#/definitions/opacity"
+        }
       }
     },
     "surface": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean" },
-        "opacity": { "$ref": "#/definitions/opacity" }
+        "enabled": {
+          "type": "boolean"
+        },
+        "opacity": {
+          "$ref": "#/definitions/opacity"
+        }
       }
     },
     "rule": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "enabled": { "type": "boolean", "description": "The rule only applies when true." },
-        "accent": { "$ref": "#/definitions/accent" },
-        "color": { "$ref": "#/definitions/color" },
-        "opacity": { "$ref": "#/definitions/opacity" }
+        "enabled": {
+          "type": "boolean",
+          "description": "The rule only applies when true."
+        },
+        "accent": {
+          "$ref": "#/definitions/accent"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "opacity": {
+          "$ref": "#/definitions/opacity"
+        }
       }
     }
   },
   "properties": {
-    "$schema": { "type": "string" },
-    "version": { "const": 1, "description": "Schema version." },
-    "enabled": { "type": "boolean", "default": true, "description": "Master switch. When false the stock taskbar is shown." },
+    "$schema": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1,
+      "description": "Schema version."
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Master switch. When false the stock taskbar is shown."
+    },
     "theme": {
       "type": "string",
-      "enum": ["auto", "light", "dark"],
+      "enum": [
+        "auto",
+        "light",
+        "dark"
+      ],
       "default": "auto",
       "description": "Which colour mode drives \"auto\" colours and the tray icon. auto follows Windows."
     },
     "taskbars": {
       "type": "string",
-      "enum": ["all", "primary"],
+      "enum": [
+        "all",
+        "primary"
+      ],
       "default": "all",
       "description": "Style every monitor's taskbar, or only the primary one."
     },
@@ -70,27 +111,58 @@
       "additionalProperties": false,
       "description": "Appearance used when no other rule matches.",
       "properties": {
-        "accent": { "$ref": "#/definitions/accent" },
-        "color": { "$ref": "#/definitions/color" },
-        "opacity": { "$ref": "#/definitions/opacity" }
+        "accent": {
+          "$ref": "#/definitions/accent"
+        },
+        "color": {
+          "$ref": "#/definitions/color"
+        },
+        "opacity": {
+          "$ref": "#/definitions/opacity"
+        }
       }
     },
-    "maximized": { "$ref": "#/definitions/rule", "description": "Applies on a monitor that has a maximized window." },
-    "start_menu": { "$ref": "#/definitions/rule", "description": "Applies while the Start menu or Search has focus." },
+    "maximized": {
+      "$ref": "#/definitions/rule",
+      "description": "Applies on a monitor that has a maximized window."
+    },
+    "start_menu": {
+      "$ref": "#/definitions/rule",
+      "description": "Applies while the Start menu or Search has focus."
+    },
     "apps": {
       "type": "array",
       "maxItems": 64,
-      "description": "Applies while the named application has focus. The first matching rule wins. They take priority over \"maximized\" and are overridden by \"start_menu\".",
+      "description": "Per-application rules. The first matching rule wins. A rule can restyle the taskbar while the app has focus (accent/color/opacity), make the app's own windows translucent (window_opacity), or both. They take priority over \"maximized\" and are overridden by \"start_menu\".",
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["exe"],
         "properties": {
-          "exe": { "type": "string", "minLength": 1, "pattern": "^[^\\\\/:*?\"<>|]+$", "description": "Executable file name, case-insensitive, e.g. chrome.exe." },
-          "accent": { "$ref": "#/definitions/accent" },
-          "color": { "$ref": "#/definitions/color" },
-          "opacity": { "$ref": "#/definitions/opacity" }
-        }
+          "exe": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^[^\\\\/:*?\"<>|]+$",
+            "description": "Executable file name, case-insensitive, e.g. chrome.exe."
+          },
+          "accent": {
+            "$ref": "#/definitions/accent"
+          },
+          "color": {
+            "$ref": "#/definitions/color"
+          },
+          "opacity": {
+            "$ref": "#/definitions/opacity"
+          },
+          "window_opacity": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100,
+            "description": "Makes every window of this application uniformly translucent while TaskGlass runs (100 = stock, never below 10 in practice). Content included. Optional."
+          }
+        },
+        "required": [
+          "exe"
+        ]
       }
     },
     "surfaces": {
@@ -98,14 +170,28 @@
       "additionalProperties": false,
       "description": "Shell surfaces whose own background can be made translucent. Each has enabled and opacity (100 = stock look, 0 = no background; File Explorer windows never go below 10).",
       "properties": {
-        "tray_overflow": { "$ref": "#/definitions/surface", "description": "The flyout that lists hidden tray icons (the ^ button). Needs taskglass_tap.dll and xaml_fix." },
-        "start_menu_flyout": { "$ref": "#/definitions/surface", "description": "The Start menu and its phone panel. Needs taskglass_tap.dll and xaml_fix; loads the helper DLL into StartMenuExperienceHost.exe." },
-        "explorer": { "$ref": "#/definitions/surface", "description": "File Explorer windows, as a uniform window opacity (content included). Needs no DLL." }
+        "tray_overflow": {
+          "$ref": "#/definitions/surface",
+          "description": "The flyout that lists hidden tray icons (the ^ button). Needs taskglass_tap.dll and xaml_fix."
+        },
+        "start_menu_flyout": {
+          "$ref": "#/definitions/surface",
+          "description": "The Start menu and its phone panel. Needs taskglass_tap.dll and xaml_fix; loads the helper DLL into StartMenuExperienceHost.exe."
+        },
+        "explorer": {
+          "$ref": "#/definitions/surface",
+          "description": "File Explorer windows, as a uniform window opacity (content included). Needs no DLL."
+        }
       }
     },
     "tray_icon": {
       "type": "string",
-      "enum": ["auto", "color", "light", "dark"],
+      "enum": [
+        "auto",
+        "color",
+        "light",
+        "dark"
+      ],
       "default": "auto",
       "description": "Notification-area icon. auto: monochrome glyph that contrasts with the Windows theme."
     },
@@ -119,14 +205,41 @@
       "default": "Ctrl+Alt+G",
       "description": "The shortcut that toggles \"enabled\" while \"hotkey_enabled\" is true, e.g. \"Ctrl+Alt+G\". Needs at least one of Ctrl, Alt, Shift, Win and a key A-Z, 0-9 or F1-F24."
     },
-    "poll_ms": { "type": "integer", "minimum": 50, "maximum": 10000, "default": 500, "description": "Fallback sampling interval. Window events normally trigger updates instantly." },
-    "debounce_ms": { "type": "integer", "minimum": 0, "maximum": 1000, "default": 25, "description": "Coalesces bursts of window events into one update." },
-    "refresh_ms": { "type": "integer", "minimum": 100, "maximum": 60000, "default": 1000, "description": "Re-apply the effect this often even if nothing changed." },
+    "poll_ms": {
+      "type": "integer",
+      "minimum": 50,
+      "maximum": 10000,
+      "default": 500,
+      "description": "Fallback sampling interval. Window events normally trigger updates instantly."
+    },
+    "debounce_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000,
+      "default": 25,
+      "description": "Coalesces bursts of window events into one update."
+    },
+    "refresh_ms": {
+      "type": "integer",
+      "minimum": 100,
+      "maximum": 60000,
+      "default": 1000,
+      "description": "Re-apply the effect this often even if nothing changed."
+    },
     "xaml_fix": {
       "type": "boolean",
       "default": true,
       "description": "Remove Windows 11's own XAML taskbar fill for true transparency (needs taskglass_tap.dll). false never touches Explorer."
     },
-    "log_level": { "type": "string", "enum": ["debug", "info", "warn", "error"], "default": "info" }
+    "log_level": {
+      "type": "string",
+      "enum": [
+        "debug",
+        "info",
+        "warn",
+        "error"
+      ],
+      "default": "info"
+    }
   }
 }

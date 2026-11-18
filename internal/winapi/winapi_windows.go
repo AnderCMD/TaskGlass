@@ -447,3 +447,46 @@ func ClearWindowAlpha(h HWND, removeStyle bool) {
 		procSetWindowLongPtrW.Call(h, ^uintptr(19), exStyle(h)&^wsExLayered)
 	}
 }
+
+const (
+	gwOwner         = 4
+	wsExToolWindowF = 0x00000080
+)
+
+var procGetWindow = user32.NewProc("GetWindow")
+
+type rect struct{ L, T, R, B int32 }
+
+var procGetWindowRect = user32.NewProc("GetWindowRect")
+
+// AppWindows returns the visible top-level application windows of processes
+// whose executable file name is exe (lower case). Tool windows, owned windows
+// (dialogs, popups), shell windows and tiny windows are skipped.
+func AppWindows(exe string) []HWND {
+	var out []HWND
+	enumTopLevel(func(h HWND) bool {
+		if v, _, _ := procIsWindowVisible.Call(h); v == 0 {
+			return true
+		}
+		if shellClasses[className(h)] {
+			return true
+		}
+		if ex := exStyle(h); ex&wsExToolWindowF != 0 {
+			return true
+		}
+		if o, _, _ := procGetWindow.Call(h, gwOwner); o != 0 {
+			return true
+		}
+		var r rect
+		if ok, _, _ := procGetWindowRect.Call(h, uintptr(unsafe.Pointer(&r))); ok == 0 || r.R-r.L < 120 || r.B-r.T < 60 {
+			return true
+		}
+		var pid uint32
+		procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
+		if processExe(pid) == exe {
+			out = append(out, h)
+		}
+		return true
+	})
+	return out
+}

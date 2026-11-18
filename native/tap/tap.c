@@ -85,7 +85,7 @@ static const IID IID_IAgileObject_ = {0x94ea2b94, 0xe9cc, 0x49e0, {0xc0, 0xff, 0
 typedef HRESULT(STDMETHODCALLTYPE *PutOpacityFn)(void *self, double v);
 
 #define MAX_TRACKED 32
-enum { KIND_TASKBAR = 0, KIND_OVERFLOW = 1, KIND_START = 2 };
+enum { KIND_TASKBAR = 0, KIND_OVERFLOW = 1, KIND_START = 2, KIND_SHELL = 3 };
 
 typedef struct {
     InstanceHandle handle;
@@ -124,6 +124,7 @@ static volatile LONG g_vals[NVALS]; /* last values read from the shared block */
 static int g_status_slot = 1;
 static const wchar_t *g_ready_name = L"Local\\TaskGlass.Xaml.Ready";
 static BOOL g_is_explorer;
+static int g_host; /* 1 explorer, 2 Start host, 3 ShellExperienceHost */
 static volatile LONG g_thread_started;
 static BOOL g_dump_cached;
 static DWORD g_dump_checked;
@@ -231,6 +232,7 @@ static double wanted_opacity(int kind) {
     switch (kind) {
     case KIND_TASKBAR: return g_vals[0] ? 0.0 : 1.0;
     case KIND_OVERFLOW: v = g_vals[2]; break;
+    case KIND_SHELL: v = g_vals[4]; break;
     default: v = g_vals[3]; break;
     }
     if (v <= 0) return 1.0; /* leave alone */
@@ -337,11 +339,13 @@ static DWORD WINAPI poll_thread(LPVOID unused) {
         }
         BOOL changed = FALSE;
         for (int i = 0; i < NVALS; i++) {
-            if (i == 1 || i == 5) continue; /* status slots are ours */
+            if (i == 1 || i == 5 || i == 6) continue; /* status slots are ours */
             if (vals[i] != g_vals[i]) { changed = TRUE; g_vals[i] = vals[i]; }
         }
         /* something is wanted but not found yet: keep looking every 3 s */
-        BOOL missing = g_is_explorer ? (g_vals[2] && !any_tracked(KIND_OVERFLOW)) : (g_vals[3] && !any_tracked(KIND_START));
+        BOOL missing = g_host == 1 ? (g_vals[2] && !any_tracked(KIND_OVERFLOW))
+                       : g_host == 2 ? (g_vals[3] && !any_tracked(KIND_START))
+                                     : (g_vals[4] && !any_tracked(KIND_SHELL));
         EnterCriticalSection(&g_list_cs);
         DWORD now = GetTickCount();
         for (Inst *in = g_insts; in; in = in->next) {
@@ -404,6 +408,7 @@ static BOOL track(Inst *in, InstanceHandle handle, void *ui, int kind, const wch
 /* Start menu: element names are filled in from tap.dump output of
  * StartMenuExperienceHost; see start_kind below. */
 static int start_kind(HSTRING name, const wchar_t **what, const wchar_t **cls);
+static int shell_kind(HSTRING name, const wchar_t **what, const wchar_t **cls);
 
 typedef struct {
     Inst *in;
@@ -438,7 +443,7 @@ static void scan_node(Scan *sc, void *dep, int depth, BOOL in_frame) {
         if (frame && (fill || stroke)) { kind = KIND_TASKBAR; what = fill ? L"BackgroundFill" : L"BackgroundStroke"; want_class = L"Windows.UI.Xaml.Shapes.Rectangle"; }
         else if (hs_eq(name, L"OverflowFlyoutBackgroundBorder")) { kind = KIND_OVERFLOW; what = L"OverflowFlyoutBackgroundBorder"; want_class = L"Windows.UI.Xaml.Controls.Border"; }
     } else {
-        kind = start_kind(name, &what, &want_class);
+        kind = g_host == 3 ? shell_kind(name, &what, &want_class) : start_kind(name, &what, &want_class);
     }
     if (name) WindowsDeleteString(name);
 
@@ -761,6 +766,7 @@ static int host_kind(void) {
     if (!base) return 0;
     if (_wcsicmp(base + 1, L"explorer.exe") == 0) return 1;
     if (_wcsicmp(base + 1, L"StartMenuExperienceHost.exe") == 0) return 2;
+    if (_wcsicmp(base + 1, L"ShellExperienceHost.exe") == 0) return 3;
     return 0;
 }
 
@@ -774,9 +780,13 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
          * address; only start the installer inside Explorer itself. */
         int host = host_kind();
         g_is_explorer = host == 1;
+        g_host = host;
         if (host == 2) {
             g_status_slot = 5;
             g_ready_name = L"Local\\TaskGlass.Xaml.Ready.Start";
+        } else if (host == 3) {
+            g_status_slot = 6;
+            g_ready_name = L"Local\\TaskGlass.Xaml.Ready.Shell";
         }
         if (host != 0) {
             HANDLE t = CreateThread(NULL, 0, install_thread, NULL, 0, NULL);
@@ -796,5 +806,12 @@ static int start_kind(HSTRING name, const wchar_t **what, const wchar_t **cls) {
         *cls = L"Windows.UI.Xaml.Controls.Border";
         return KIND_START;
     }
+    return -1;
+}
+
+/* ShellExperienceHost: notification centre, calendar, quick settings. Names are
+ * filled in from a tap.dump of the real process. */
+static int shell_kind(HSTRING name, const wchar_t **what, const wchar_t **cls) {
+    (void)name; (void)what; (void)cls;
     return -1;
 }

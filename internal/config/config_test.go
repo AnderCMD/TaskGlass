@@ -187,6 +187,43 @@ func TestSurfacesDefaultsAndValidation(t *testing.T) {
 	}
 }
 
+func TestOpacityAcceptsDecimals(t *testing.T) {
+	c, err := Parse([]byte(`{"version":1,"surfaces":{"explorer":{"enabled":true,"opacity":99.5},"tray_overflow":{"enabled":true,"opacity":60.4}},"default":{"accent":"blur","color":"auto","opacity":12.6}}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Surfaces.Explorer.Opacity != 100 || c.Surfaces.TrayOverflow.Opacity != 60 || c.Default.Opacity != 13 {
+		t.Fatalf("decimals must be rounded: %+v", c)
+	}
+	for _, bad := range []string{`"abc"`, `true`, `null`, `[1]`, `1e999`, `100.6`, `-0.6`} {
+		if _, err := Parse([]byte(`{"version":1,"surfaces":{"explorer":{"enabled":true,"opacity":` + bad + `}}}`)); err == nil {
+			t.Errorf("opacity %s must be rejected", bad)
+		}
+	}
+}
+
+func TestAppWindowOpacity(t *testing.T) {
+	c, err := Parse([]byte(`{"version":1,"apps":[{"exe":"Code.exe","window_opacity":92.4},{"exe":"x.exe","accent":"blur","color":"auto","opacity":30}]}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Apps[0].WindowOpacity == nil || *c.Apps[0].WindowOpacity != 92 || c.Apps[0].StylesTaskbar() {
+		t.Fatalf("window-only rule parsed wrong: %+v", c.Apps[0])
+	}
+	if c.Apps[1].WindowOpacity != nil || !c.Apps[1].StylesTaskbar() {
+		t.Fatalf("taskbar rule parsed wrong: %+v", c.Apps[1])
+	}
+	for _, bad := range []string{
+		`{"version":1,"apps":[{"exe":"a.exe"}]}`,
+		`{"version":1,"apps":[{"exe":"a.exe","window_opacity":101}]}`,
+		`{"version":1,"apps":[{"exe":"a.exe","window_opacity":-1}]}`,
+	} {
+		if _, err := Parse([]byte(bad)); err == nil {
+			t.Errorf("expected an error for %s", bad)
+		}
+	}
+}
+
 func TestExplicitFalseSticks(t *testing.T) {
 	c, err := Parse([]byte(`{"version":1,"enabled":false,"xaml_fix":false}`))
 	if err != nil || c.Enabled || c.XamlFix {
