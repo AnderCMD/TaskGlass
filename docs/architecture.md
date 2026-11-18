@@ -12,6 +12,7 @@ internal/winapi      the only package that calls Win32
 internal/xaml        loads and drives the native TAP inside Explorer
 internal/autostart   HKCU Run key
 native/tap           C source of taskglass_tap.dll (runs inside explorer.exe)
+site/                static GitHub Pages site (ES/EN), deployed by .github/workflows/pages.yml
 installer/           Inno Setup script for the per-user installer
 assets/              embedded tray icons; assets/src holds the SVG/HTML sources
 docs/                documentation, config schema, README images

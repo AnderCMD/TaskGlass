@@ -10,7 +10,7 @@
 
 TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos, y hace translúcido también el desplegable con los iconos ocultos de la bandeja. Solo hace eso. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
 
-[Read in English](README.md)
+**Sitio web con descargas y guía paso a paso: [andercmd.github.io/TaskGlass](https://andercmd.github.io/TaskGlass/)** · [Read in English](README.md)
 
 ## Características
 
@@ -74,6 +74,10 @@ Para quitar ese relleno, `taskglass_tap.dll` se carga dentro de `explorer.exe` m
 - Cargar código en Explorer es lo que las herramientas de seguridad llaman "inyección", y algunos antivirus pueden avisar. La DLL es pequeña y su código está en [native/tap](native/tap); puedes compilarla tú. Con `"xaml_fix": false` nunca se toca Explorer.
 - Verificado en Windows 11 compilación 26300 con un monitor y ocultado automático. Windows 10 (sin barra XAML) solo necesita la API de acento y no está probado; multimonitor tampoco. [Abre un issue](https://github.com/AnderCMD/TaskGlass/issues) indicando tu versión de Windows si algo se ve mal.
 - Si la barra se ve mal: `taskglass.exe --restore`, o reinicia Explorer.
+
+## Sitio web
+
+La carpeta `site/` es una página estática bilingüe (español/inglés) para quien no conoce GitHub: descargas del instalador y de la versión portable (se leen del último release), pasos de instalación y preguntas frecuentes. `.github/workflows/pages.yml` la publica en GitHub Pages cada vez que `main` la cambia.
 
 ## Hoja de ruta
 

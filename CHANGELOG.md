@@ -5,6 +5,7 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 ## [1.1.0] - 2026-11-18
 
 ### Added
+- **Website** (GitHub Pages, `site/`): bilingual landing page with installer and portable downloads, install steps and FAQ for non-technical users.
 - **Translucent tray flyout**: `surfaces.tray_overflow` makes the flyout with the hidden tray icons (the `^` button) translucent, with its own opacity, enabled by default, and a tray menu item. The helper DLL finds the flyout even when it already existed before TaskGlass started; for that TaskGlass briefly adds and removes a tray icon, and stops as soon as the DLL reports it is tracked.
 - **Windows installer** (`TaskGlass-<version>-Setup.exe`, Inno Setup): per-user, no administrator rights, English and Spanish, optional start with Windows and desktop shortcut. Uninstalling asks the running TaskGlass to quit, restores the taskbar and offers to delete settings. `scripts/build-installer.ps1` builds it; the release workflow publishes it with checksums for both files and CI builds it on every run.
 - Opacity values accept decimals (`99.5`) and are rounded; `null` and out-of-range values are rejected with a clear message.
