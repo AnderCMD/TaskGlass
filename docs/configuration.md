@@ -24,7 +24,7 @@ Changes made from the tray menu are saved to this same file.
     { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
   ],
   "surfaces": {
-    "tray_overflow": { "enabled": true, "opacity": 60 }
+    "tray_overflow": { "enabled": true, "opacity": 30 }
   },
   "tray_icon": "auto",
   "hotkey_enabled": false,

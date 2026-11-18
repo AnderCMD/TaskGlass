@@ -269,7 +269,7 @@ func Default() Config {
 			Appearance: Appearance{Accent: AccentAcrylic, Color: ColorAuto, Opacity: 60},
 		},
 		Surfaces: Surfaces{
-			TrayOverflow: Surface{Enabled: true, Opacity: 60},
+			TrayOverflow: Surface{Enabled: true, Opacity: 30},
 		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
