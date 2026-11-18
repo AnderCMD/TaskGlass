@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TaskGlass - barra de tareas transparente para Windows</title>
+<meta name="description" content="TaskGlass hace transparente la barra de tareas de Windows y el desplegable de la bandeja. Gratis, de código abierto, con instalador y versión portable.">
+<meta property="og:title" content="TaskGlass - barra de tareas transparente para Windows">
+<meta property="og:description" content="Barra de tareas transparente en Windows 10 y 11. Gratis y de código abierto.">
+<meta property="og:image" content="https://andercmd.github.io/TaskGlass/img/social-preview.png">
+<link rel="icon" href="favicon.ico">
+<style>
+:root{--bg:#f6f7fb;--card:#fff;--text:#14181f;--muted:#566070;--line:#e2e6ee;--accent:#2563eb;--accent-text:#fff;--soft:#eaf0ff;--warn:#fff6e0;--warn-line:#f1d99a}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#161b22;--text:#e8ecf3;--muted:#9aa5b5;--line:#262d38;--accent:#5b8cff;--accent-text:#0b1020;--soft:#1a2335;--warn:#2a2412;--warn-line:#5a4b1a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+.wrap{max-width:960px;margin:0 auto;padding:0 16px}
+header.top{display:flex;align-items:center;gap:12px;padding:14px 0;flex-wrap:wrap}
+header.top .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.15rem;color:var(--text);text-decoration:none}
+header.top img{width:34px;height:34px;border-radius:8px}
+header.top nav{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+header.top nav a.link{color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+header.top nav a.link:hover{background:var(--soft);color:var(--text)}
+.lang{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:8px;padding:6px 10px;font:inherit;cursor:pointer}
+.hero{text-align:center;padding:36px 0 24px}
+.hero h1{font-size:clamp(2rem,6vw,3rem);line-height:1.15;margin:0 0 14px}
+.hero p.lead{font-size:1.2rem;color:var(--muted);max-width:640px;margin:0 auto 26px}
+.banner{width:100%;border-radius:16px;border:1px solid var(--line);margin:26px 0 6px}
+.dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin:26px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.card h3{margin:0 0 6px}
+.card p{margin:0 0 14px;color:var(--muted)}
+.btn{display:inline-block;background:var(--accent);color:var(--accent-text);text-decoration:none;font-weight:700;padding:13px 20px;border-radius:12px;font-size:1rem}
+.btn.alt{background:var(--soft);color:var(--accent)}
+.badge{display:inline-block;background:var(--soft);color:var(--accent);font-size:.8rem;font-weight:700;padding:2px 10px;border-radius:99px;margin-bottom:8px}
+.meta{font-size:.9rem;color:var(--muted);margin-top:8px}
+section{padding:30px 0}
+section>h2{font-size:1.7rem;margin:0 0 6px}
+section>p.sub{color:var(--muted);margin:0 0 18px}
+.steps{counter-reset:s;display:grid;gap:12px;padding:0;list-style:none}
+.steps li{counter-increment:s;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px 16px 62px;position:relative}
+.steps li::before{content:counter(s);position:absolute;left:16px;top:14px;width:32px;height:32px;border-radius:50%;background:var(--accent);color:var(--accent-text);display:grid;place-items:center;font-weight:700}
+.steps li>b{display:block}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin-top:14px}
+a.card{text-decoration:none;color:inherit}
+.note{background:var(--warn);border:1px solid var(--warn-line);border-radius:14px;padding:14px 16px;margin:14px 0}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
+summary{cursor:pointer;font-weight:600}
+details p{margin:10px 0 0;color:var(--muted)}
+code,kbd{background:var(--soft);padding:1px 6px;border-radius:6px;font-size:.92em}
+footer{border-top:1px solid var(--line);padding:26px 0 40px;color:var(--muted);font-size:.95rem;text-align:center}
+[data-l]{display:none}
+html[lang=es] [data-l=es],html[lang=en] [data-l=en]{display:inline}
+html[lang=es] div[data-l=es],html[lang=en] div[data-l=en]{display:block}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <a class="brand" href="#"><img src="img/logo.png" alt=""> TaskGlass</a>
+  <nav>
+    <a class="link" href="#descargar"><span data-l="es">Descargar</span><span data-l="en">Download</span></a>
+    <a class="link" href="#instalar"><span data-l="es">Instalar</span><span data-l="en">Install</span></a>
+    <a class="link" href="#ayuda"><span data-l="es">Ayuda</span><span data-l="en">Help</span></a>
+    <a class="link" href="#docs"><span data-l="es">Documentación</span><span data-l="en">Docs</span></a>
+    <button class="lang" id="lang" type="button" aria-label="Language">EN</button>
+  </nav>
+</header>
+
+<div class="hero">
+  <h1><span data-l="es">Tu barra de tareas de Windows, transparente</span><span data-l="en">Your Windows taskbar, transparent</span></h1>
+  <p class="lead">
+    <span data-l="es">TaskGlass quita el fondo gris de la barra de tareas y también del desplegable de los iconos ocultos. Es gratis, pequeño y se instala en un minuto.</span>
+    <span data-l="en">TaskGlass removes the grey background of the taskbar and of the hidden-icons flyout. It is free, small and installs in a minute.</span>
+  </p>
+  <a class="btn" href="#descargar"><span data-l="es">Descargar gratis</span><span data-l="en">Download for free</span></a>
+  <img class="banner" src="img/banner.png" alt="TaskGlass">
+</div>
+
+<section id="descargar">
+  <h2><span data-l="es">Descargar</span><span data-l="en">Download</span></h2>
+  <p class="sub"><span data-l="es">Elige una de las dos opciones. Si no estás seguro, usa el instalador.</span><span data-l="en">Pick one of the two options. If you are not sure, use the installer.</span></p>
+  <div class="dl">
+    <div class="card">
+      <span class="badge"><span data-l="es">Recomendado</span><span data-l="en">Recommended</span></span>
+      <h3><span data-l="es">Instalador</span><span data-l="en">Installer</span></h3>
+      <p><span data-l="es">Un asistente que lo instala por ti. No necesita permisos de administrador. Se desinstala desde Windows y deja la barra como estaba.</span><span data-l="en">A wizard that installs it for you. No administrator rights needed. Uninstall it from Windows and your taskbar goes back to normal.</span></p>
+      <a class="btn" id="dl-setup" href="https://github.com/AnderCMD/TaskGlass/releases/latest"><span data-l="es">Descargar instalador</span><span data-l="en">Download installer</span></a>
+      <div class="meta" id="meta-setup"></div>
+    </div>
+    <div class="card">
+      <h3><span data-l="es">Portable</span><span data-l="en">Portable</span></h3>
+      <p><span data-l="es">Un archivo ZIP: lo descomprimes y lo ejecutas. No instala nada en Windows. Ideal para llevarlo en una carpeta o en un USB.</span><span data-l="en">A ZIP file: extract it and run it. Nothing is installed in Windows. Ideal to keep in a folder or on a USB drive.</span></p>
+      <a class="btn alt" id="dl-zip" href="https://github.com/AnderCMD/TaskGlass/releases/latest"><span data-l="es">Descargar portable (ZIP)</span><span data-l="en">Download portable (ZIP)</span></a>
+      <div class="meta" id="meta-zip"></div>
+    </div>
+  </div>
+  <p class="meta"><span data-l="es">Versión:</span><span data-l="en">Version:</span> <b id="ver">1.1.0</b> · <span data-l="es">Para Windows 10 y 11 de 64 bits.</span><span data-l="en">For 64-bit Windows 10 and 11.</span> · <a id="sums" href="https://github.com/AnderCMD/TaskGlass/releases/latest"><span data-l="es">Sumas de verificación</span><span data-l="en">Checksums</span></a></p>
+  <div class="note">
+    <b><span data-l="es">Windows puede mostrar un aviso azul ("Windows protegió tu PC").</span><span data-l="en">Windows may show a blue warning ("Windows protected your PC").</span></b>
+    <span data-l="es">Es normal: el programa es nuevo y no tiene firma digital de pago. Pulsa <b>Más información</b> y luego <b>Ejecutar de todas formas</b>. El código es público y puedes revisarlo.</span>
+    <span data-l="en">This is normal: the program is new and has no paid digital signature. Click <b>More info</b> and then <b>Run anyway</b>. The code is public and you can review it.</span>
+  </div>
+</section>
+
+<section id="instalar">
+  <h2><span data-l="es">Cómo instalarlo</span><span data-l="en">How to install</span></h2>
+  <p class="sub"><span data-l="es">Tres pasos, sin conocimientos técnicos.</span><span data-l="en">Three steps, no technical knowledge needed.</span></p>
+  <ol class="steps">
+    <li><b><span data-l="es">Desactiva el color de énfasis en la barra</span><span data-l="en">Turn off the accent color on the taskbar</span></b>
+      <span data-l="es">Abre <b>Configuración &gt; Personalización &gt; Colores</b> y apaga <i>Mostrar el color de énfasis en Inicio y en la barra de tareas</i>. Si está encendido, Windows pinta la barra y no se verá transparente.</span>
+      <span data-l="en">Open <b>Settings &gt; Personalization &gt; Colors</b> and turn off <i>Show accent color on Start and taskbar</i>. If it is on, Windows paints the bar and it will not look transparent.</span></li>
+    <li><b><span data-l="es">Instala o descomprime</span><span data-l="en">Install or extract</span></b>
+      <span data-l="es"><b>Instalador:</b> abre el archivo descargado y pulsa Siguiente. <b>Portable:</b> descomprime el ZIP en una carpeta que no vayas a borrar (por ejemplo <code>Documentos\TaskGlass</code>) y abre <code>taskglass.exe</code>. Deja los dos archivos juntos.</span>
+      <span data-l="en"><b>Installer:</b> open the downloaded file and click Next. <b>Portable:</b> extract the ZIP to a folder you will keep (for example <code>Documents\TaskGlass</code>) and open <code>taskglass.exe</code>. Keep both files together.</span></li>
+    <li><b><span data-l="es">Listo</span><span data-l="en">Done</span></b>
+      <span data-l="es">La barra se vuelve transparente al instante. TaskGlass queda en la bandeja del sistema (junto al reloj, quizá dentro del botón <b>^</b>). Haz clic derecho en su icono para ajustarlo o salir.</span>
+      <span data-l="en">The bar turns transparent right away. TaskGlass stays in the notification area (next to the clock, maybe inside the <b>^</b> button). Right-click its icon to adjust it or quit.</span></li>
+  </ol>
+</section>
+
+<section>
+  <h2><span data-l="es">Qué hace</span><span data-l="en">What it does</span></h2>
+  <div class="grid">
+    <div class="card"><h3><span data-l="es">Barra transparente</span><span data-l="en">Transparent taskbar</span></h3><p><span data-l="es">Totalmente transparente, también con ventanas maximizadas, o con desenfoque y acrílico si lo prefieres.</span><span data-l="en">Fully transparent, also with maximized windows, or blurred and acrylic if you prefer.</span></p></div>
+    <div class="card"><h3><span data-l="es">Desplegable de la bandeja</span><span data-l="en">Tray flyout</span></h3><p><span data-l="es">El cuadro de iconos ocultos (el botón <b>^</b>) queda casi transparente, con un poco de fondo para que no se pierdan los iconos.</span><span data-l="en">The hidden-icons box (the <b>^</b> button) becomes almost transparent, with a little background so icons stay visible.</span></p></div>
+    <div class="card"><h3><span data-l="es">Modo claro y oscuro</span><span data-l="en">Light and dark mode</span></h3><p><span data-l="es">Sigue el tema de Windows al instante, también el menú de su icono.</span><span data-l="en">Follows the Windows theme instantly, including its icon menu.</span></p></div>
+    <div class="card"><h3><span data-l="es">Ligero y seguro</span><span data-l="en">Light and safe</span></h3><p><span data-l="es">Casi no usa procesador. Al cerrarlo, o si falla, la barra vuelve a su aspecto normal.</span><span data-l="en">Almost no CPU. When you quit it, or if it crashes, the taskbar goes back to normal.</span></p></div>
+  </div>
+  <p class="meta"><span data-l="es">TaskGlass solo cambia la barra de tareas y el desplegable de la bandeja. No toca el menú Inicio, las notificaciones, la configuración rápida ni otras ventanas.</span><span data-l="en">TaskGlass only changes the taskbar and the tray flyout. It does not touch the Start menu, notifications, quick settings or other windows.</span></p>
+</section>
+
+<section id="ayuda">
+  <h2><span data-l="es">Ayuda y preguntas frecuentes</span><span data-l="en">Help and FAQ</span></h2>
+  <details><summary><span data-l="es">La barra no se ve transparente</span><span data-l="en">The taskbar is not transparent</span></summary>
+    <p><span data-l="es">1) Apaga <i>Mostrar el color de énfasis en Inicio y en la barra de tareas</i> (Configuración &gt; Personalización &gt; Colores). 2) Mira que el icono de TaskGlass esté en la bandeja y que <b>Enabled</b> esté marcado. 3) En el menú, comprueba que <b>Fully transparent (Windows 11)</b> esté marcado. 4) Con la versión portable, deja <code>taskglass_tap.dll</code> junto a <code>taskglass.exe</code>.</span><span data-l="en">1) Turn off <i>Show accent color on Start and taskbar</i> (Settings &gt; Personalization &gt; Colors). 2) Check that the TaskGlass icon is in the tray and <b>Enabled</b> is ticked. 3) In the menu, check that <b>Fully transparent (Windows 11)</b> is ticked. 4) With the portable version, keep <code>taskglass_tap.dll</code> next to <code>taskglass.exe</code>.</span></p></details>
+  <details><summary><span data-l="es">No encuentro el icono</span><span data-l="en">I cannot find the icon</span></summary>
+    <p><span data-l="es">Está junto al reloj. Si no lo ves, pulsa el botón <b>^</b> y arrástralo a la barra para tenerlo siempre visible.</span><span data-l="en">It is next to the clock. If you do not see it, click the <b>^</b> button and drag it onto the bar to keep it always visible.</span></p></details>
+  <details><summary><span data-l="es">Mi antivirus dice que es sospechoso</span><span data-l="en">My antivirus flags it</span></summary>
+    <p><span data-l="es">Para quitar el fondo de la barra de Windows 11, TaskGlass carga una pequeña librería dentro del Explorador de Windows. Algunos antivirus lo marcan por esa técnica. Todo el código es público en GitHub. Si prefieres que no toque el Explorador, desmarca <b>Fully transparent (Windows 11)</b> en su menú (quedará con desenfoque en vez de transparencia total).</span><span data-l="en">To remove the Windows 11 taskbar background, TaskGlass loads a small library inside Windows Explorer. Some antivirus programs flag that technique. All the code is public on GitHub. If you prefer it not to touch Explorer, untick <b>Fully transparent (Windows 11)</b> in its menu (you will get blur instead of full transparency).</span></p></details>
+  <details><summary><span data-l="es">Cómo lo hago menos transparente</span><span data-l="en">How do I make it less transparent</span></summary>
+    <p><span data-l="es">Clic derecho en el icono &gt; <b>Style</b> para elegir Clear, Blur, Acrylic u Opaque. Para ajustes finos, <b>Open config file</b> abre un archivo de texto; guarda los cambios y se aplican solos.</span><span data-l="en">Right-click the icon &gt; <b>Style</b> to pick Clear, Blur, Acrylic or Opaque. For fine tuning, <b>Open config file</b> opens a text file; save your changes and they apply by themselves.</span></p></details>
+  <details><summary><span data-l="es">Quiero que arranque con Windows</span><span data-l="en">I want it to start with Windows</span></summary>
+    <p><span data-l="es">Clic derecho en el icono &gt; marca <b>Start with Windows</b>.</span><span data-l="en">Right-click the icon &gt; tick <b>Start with Windows</b>.</span></p></details>
+  <details><summary><span data-l="es">Cómo lo desinstalo</span><span data-l="en">How do I uninstall it</span></summary>
+    <p><span data-l="es">Instalador: Configuración &gt; Aplicaciones &gt; TaskGlass &gt; Desinstalar. Portable: clic derecho en el icono &gt; <b>Quit TaskGlass</b> y borra la carpeta. En ambos casos la barra vuelve a la normalidad.</span><span data-l="en">Installer: Settings &gt; Apps &gt; TaskGlass &gt; Uninstall. Portable: right-click the icon &gt; <b>Quit TaskGlass</b> and delete the folder. Either way the taskbar goes back to normal.</span></p></details>
+  <details><summary><span data-l="es">La barra se ve rara y no se arregla</span><span data-l="en">The taskbar looks wrong and will not recover</span></summary>
+    <p><span data-l="es">Pulsa <kbd>Win</kbd>+<kbd>R</kbd>, escribe <code>taskglass.exe --restore</code> (con la ruta completa si hace falta) y Enter. O reinicia el Explorador de Windows desde el Administrador de tareas.</span><span data-l="en">Press <kbd>Win</kbd>+<kbd>R</kbd>, type <code>taskglass.exe --restore</code> (with the full path if needed) and Enter. Or restart Windows Explorer from Task Manager.</span></p></details>
+  <details><summary><span data-l="es">¿Funciona en Windows 10 o con varios monitores?</span><span data-l="en">Does it work on Windows 10 or with several monitors?</span></summary>
+    <p><span data-l="es">Está probado a fondo en Windows 11 con un monitor. En Windows 10 y con varios monitores debería funcionar pero aún no está verificado. Si algo falla, cuéntalo en GitHub indicando tu versión de Windows.</span><span data-l="en">It is thoroughly tested on Windows 11 with one monitor. Windows 10 and multi-monitor setups should work but are not verified yet. If something fails, report it on GitHub with your Windows version.</span></p></details>
+</section>
+
+<section id="docs">
+  <h2><span data-l="es">Documentación</span><span data-l="en">Documentation</span></h2>
+  <div class="grid">
+    <a class="card" href="https://github.com/AnderCMD/TaskGlass/blob/main/docs/configuration.md"><h3><span data-l="es">Todas las opciones</span><span data-l="en">All options</span></h3><p><span data-l="es">Guía de configuración completa (en inglés).</span><span data-l="en">Full configuration guide.</span></p></a>
+    <a class="card" href="https://github.com/AnderCMD/TaskGlass/blob/main/docs/architecture.md"><h3><span data-l="es">Cómo funciona por dentro</span><span data-l="en">How it works inside</span></h3><p><span data-l="es">Arquitectura para quien quiera entenderlo o colaborar (en inglés).</span><span data-l="en">Architecture for the curious and contributors.</span></p></a>
+    <a class="card" href="https://github.com/AnderCMD/TaskGlass/blob/main/CHANGELOG.md"><h3><span data-l="es">Novedades</span><span data-l="en">What is new</span></h3><p><span data-l="es">Historial de cambios de cada versión.</span><span data-l="en">Changelog of every version.</span></p></a>
+    <a class="card" href="https://github.com/AnderCMD/TaskGlass/issues"><h3><span data-l="es">Reportar un problema</span><span data-l="en">Report a problem</span></h3><p><span data-l="es">Necesitas una cuenta gratuita de GitHub.</span><span data-l="en">You need a free GitHub account.</span></p></a>
+  </div>
+</section>
+
+<footer>
+  TaskGlass · MIT · <a href="https://github.com/AnderCMD/TaskGlass"><span data-l="es">Código en GitHub</span><span data-l="en">Source on GitHub</span></a>
+</footer>
+</div>
+
+<script>
+(function(){
+  var html=document.documentElement,btn=document.getElementById('lang');
+  var saved=null;try{saved=localStorage.getItem('tg-lang')}catch(e){}
+  var lang=saved||((navigator.language||'es').toLowerCase().indexOf('es')===0?'es':'en');
+  function set(l){html.lang=l;btn.textContent=l==='es'?'EN':'ES';try{localStorage.setItem('tg-lang',l)}catch(e){}}
+  btn.onclick=function(){set(html.lang==='es'?'en':'es')};
+  set(lang);
+  function mb(n){return (n/1048576).toFixed(1)+' MB'}
+  fetch('https://api.github.com/repos/AnderCMD/TaskGlass/releases/latest').then(function(r){return r.ok?r.json():Promise.reject()}).then(function(rel){
+    document.getElementById('ver').textContent=rel.tag_name;
+    rel.assets.forEach(function(a){
+      if(/Setup\.exe$/i.test(a.name)){document.getElementById('dl-setup').href=a.browser_download_url;document.getElementById('meta-setup').textContent=a.name+' · '+mb(a.size)}
+      else if(/\.zip$/i.test(a.name)){document.getElementById('dl-zip').href=a.browser_download_url;document.getElementById('meta-zip').textContent=a.name+' · '+mb(a.size)}
+      else if(/SHA256SUMS/i.test(a.name)){document.getElementById('sums').href=a.browser_download_url}
+    });
+  }).catch(function(){});
+})();
+</script>
+</body>
+</html>
