@@ -8,7 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
 </p>
 
-TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, so only the icons remain. It is a small tray app written in Go (no cgo) plus a native helper DLL, with no runtime to install. It follows Windows' light and dark mode.
+TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, so only the icons remain, and makes the flyout with the hidden tray icons translucent too. That is all it does. It is a small tray app written in Go (no cgo) plus a native helper DLL, with no runtime to install. It follows Windows' light and dark mode.
 
 [Leer en español](README.es.md)
 
@@ -16,7 +16,8 @@ TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, s
 
 - **Clear / Blur / Acrylic / Opaque / Normal** styles, including truly transparent on the Windows 11 XAML taskbar (no grey fill, no border line)
 - **Light and dark aware**: `auto` colours and the tray icon follow Windows, live
-- **Smart rules**: opaque when a window is maximized, a different look while the Start menu is open, or per application (`code.exe`, `chrome.exe`, ...)
+- **Translucent tray flyout**: the flyout with the hidden icons (the `^` button) gets its own opacity
+- **Smart rules**: an optional look when a window is maximized, or per application (`code.exe`, `chrome.exe`, ...)
 - **Global hotkey** to toggle the effect (off by default, one switch to enable), and a master on/off switch
 - **Multi-monitor**: every taskbar handled independently, or only the primary one
 - **Event driven**: reacts to window events instead of polling, about 0 % CPU when idle
@@ -25,7 +26,9 @@ TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, s
 
 ## Install
 
-Download the zip from the [Releases](https://github.com/AnderCMD/TaskGlass/releases) page, extract it somewhere permanent (for example `%LOCALAPPDATA%\Programs\TaskGlass`) and run `taskglass.exe`. Keep `taskglass_tap.dll` in the same folder: it is what makes Windows 11 fully transparent (see [How it works](#how-it-works)). TaskGlass lives in the notification area; right-click its icon.
+**Installer (recommended):** download `TaskGlass-<version>-Setup.exe` from the [Releases](https://github.com/AnderCMD/TaskGlass/releases) page and run it. It installs per user (no administrator rights), adds a Start menu entry, can start TaskGlass with Windows, and its uninstaller restores your taskbar. English and Spanish.
+
+**Portable:** download the zip, extract it somewhere permanent (for example `%LOCALAPPDATA%\Programs\TaskGlass`) and run `taskglass.exe`. Keep `taskglass_tap.dll` in the same folder: it is what makes Windows 11 fully transparent (see [How it works](#how-it-works)). TaskGlass lives in the notification area; right-click its icon.
 
 Build from source (Windows, Go 1.26+, and a MinGW-w64 compiler for the helper DLL, e.g. `winget install MartinStorsjo.LLVM-MinGW.UCRT`):
 
@@ -36,7 +39,7 @@ powershell -File scripts/build-tap.ps1   # builds dist/taskglass_tap.dll
 
 ## Usage
 
-Right-click the tray icon to enable or disable TaskGlass, pick a style or a theme, toggle the rules, start with Windows, or open the config and the log.
+Right-click the tray icon to enable or disable TaskGlass, pick a style or a theme, toggle the rules and the tray flyout, start with Windows, or open the config and the log.
 
 A minimal config that makes the bar clear, opaque when something is maximized, and a tinted blur in your editor:
 
@@ -61,19 +64,21 @@ Windows exposes an undocumented accent API, `SetWindowCompositionAttribute`, tha
 
 To remove that fill, `taskglass_tap.dll` is loaded into `explorer.exe` through the XAML Diagnostics API, finds the taskbar's `BackgroundFill` and `BackgroundStroke` rectangles and sets their opacity to 0 while TaskGlass runs. If TaskGlass exits or crashes, the DLL notices and restores the stock look by itself. Details in [docs/architecture.md](docs/architecture.md).
 
+## Before you start
+
+Turn **off** *Show accent color on Start and taskbar* in Windows (Settings > Personalization > Colors). While it is on, Windows paints the taskbar with your accent color and overrides the effect TaskGlass applies, so the bar will not look transparent.
+
 ## Limitations and safety
 
 - This relies on undocumented Windows internals. A Windows update can break it; the app then falls back to accent-only effects (tints and blur still work) and logs why.
 - Loading code into Explorer is what security tools call "injection" and some antivirus products may flag it. The DLL is small and its source is in [native/tap](native/tap); you can build it yourself. Set `"xaml_fix": false` to never touch Explorer.
 - Verified on Windows 11 build 26300 with a single monitor and auto-hide enabled. Windows 10 (no XAML taskbar) only needs the accent API and is untested; so are multi-monitor setups. Please [open an issue](https://github.com/AnderCMD/TaskGlass/issues) with your Windows build if something looks off.
-- Styling File Explorer windows or the Start menu themselves is not supported yet; see the [roadmap](#roadmap).
 - If the taskbar ever looks wrong: `taskglass.exe --restore`, or restart Explorer.
 
 ## Roadmap
 
-- Glass for File Explorer windows and the Start menu flyout
 - Windows 10 and multi-monitor verification
-- Installer / winget package
+- winget package
 
 ## Contributing
 

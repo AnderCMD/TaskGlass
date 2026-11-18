@@ -236,12 +236,6 @@ func MaximizedMonitors() map[uintptr]bool {
 	return out
 }
 
-var startHosts = map[string]bool{
-	"startmenuexperiencehost.exe": true,
-	"searchhost.exe":              true,
-	"searchapp.exe":               true,
-}
-
 // processExe returns the lower-cased executable file name of process pid, or "".
 func processExe(pid uint32) string {
 	if pid == 0 {
@@ -271,15 +265,4 @@ func Foreground() (exe string, monitor uintptr) {
 	var pid uint32
 	procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
 	return processExe(pid), Monitor(h)
-}
-
-// StartMenuActive reports whether the Start menu or Search currently has focus.
-func StartMenuActive() bool {
-	h, _, _ := procGetForeground.Call()
-	if h == 0 || className(h) != "Windows.UI.Core.CoreWindow" {
-		return false
-	}
-	var pid uint32
-	procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
-	return startHosts[processExe(pid)]
 }

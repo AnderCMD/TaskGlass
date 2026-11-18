@@ -11,8 +11,8 @@ jobs:
   release:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - run: go test ./...
@@ -24,9 +24,12 @@ jobs:
           go build -ldflags "-H=windowsgui -s -w -X main.version=$v" -o dist/taskglass.exe ./cmd/taskglass
           ./scripts/build-tap.ps1
           Compress-Archive -Path dist/taskglass.exe, dist/taskglass_tap.dll, LICENSE, README.md -DestinationPath "dist/taskglass-$v-windows-amd64.zip"
-          (Get-FileHash "dist/taskglass-$v-windows-amd64.zip" -Algorithm SHA256).Hash.ToLower() + "  taskglass-$v-windows-amd64.zip" | Out-File dist/SHA256SUMS.txt -Encoding ascii
+          ./scripts/build-installer.ps1 -Version $v
+          Get-ChildItem dist/*.zip, dist/*-Setup.exe | ForEach-Object {
+            "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
+          } | Out-File dist/SHA256SUMS.txt -Encoding ascii
       - name: Publish
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/*.zip dist/SHA256SUMS.txt --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip dist/*-Setup.exe dist/SHA256SUMS.txt --generate-notes

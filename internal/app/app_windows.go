@@ -45,7 +45,8 @@ type App struct {
 	cfg     config.Config
 	modTime time.Time
 
-	systemLight atomic.Bool // Windows reports a light theme
+	systemLight atomic.Bool  // Windows reports a light theme
+	menuLight   atomic.Int32 // 0 not applied yet, 1 dark, 2 light
 	mgr         *taskbar.Manager
 	xaml        *xaml.Controller // nil when the TAP DLL is unavailable
 	ev          *events.Watcher
@@ -59,9 +60,10 @@ type App struct {
 }
 
 type menuItems struct {
-	enabled, hotkey, maximized, start, xamlFix, autostart *systray.MenuItem
-	accents                                               map[config.Accent]*systray.MenuItem
-	themes                                                map[config.Theme]*systray.MenuItem
+	enabled, hotkey, maximized, xamlFix, autostart *systray.MenuItem
+	surfTray                                       *systray.MenuItem
+	accents                                        map[config.Accent]*systray.MenuItem
+	themes                                         map[config.Theme]*systray.MenuItem
 }
 
 // New creates an App with an already-loaded configuration.
@@ -82,6 +84,7 @@ func New(o Options) *App {
 
 // Run blocks until the user quits (tray menu, --quit or a signal).
 func (a *App) Run() {
+	a.applyMenuTheme(a.snapshot())
 	systray.Run(a.onReady, a.onExit)
 	a.shutdown() // Run can return before onExit has finished; wait for the cleanup
 }
@@ -168,6 +171,19 @@ func (a *App) applySideEffects(c config.Config) {
 	a.updateTrayIcon(c)
 }
 
+// applyMenuTheme gives the tray icon's right-click menu the light or dark look
+// of Windows (apps mode), or the forced one when the config pins a theme.
+func (a *App) applyMenuTheme(c config.Config) {
+	light := c.Theme.Light(theme.AppsAreLight())
+	v := int32(0)
+	if light {
+		v = 1
+	}
+	if a.menuLight.Swap(v+1) != v+1 {
+		theme.ApplyMenuTheme(light)
+	}
+}
+
 func (a *App) isLight(c config.Config) bool { return c.Theme.Light(a.systemLight.Load()) }
 
 func (a *App) updateTrayIcon(c config.Config) {
@@ -215,7 +231,9 @@ func (a *App) loop(ctx context.Context) {
 		if !a.safely(panics, func() {
 			styled := a.mgr.Tick(c, a.isLight(c))
 			if a.xaml != nil {
-				a.xaml.SetHide(c.Enabled && c.XamlFix && styled)
+				on := c.Enabled && c.XamlFix
+				a.xaml.SetHide(on && styled)
+				a.xaml.SetOverflow(xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, int(c.Surfaces.TrayOverflow.Opacity)))
 			}
 		}) {
 			a.Log.Error("too many internal errors; restoring the taskbar and exiting")
@@ -255,6 +273,7 @@ func (a *App) loop(ctx context.Context) {
 			}
 		case <-housekeeping.C:
 			a.reload()
+			a.applyMenuTheme(a.snapshot())
 			if l := theme.SystemIsLight(); l != a.systemLight.Swap(l) {
 				a.Log.Info("windows theme changed", "light", l)
 				a.updateTrayIcon(a.snapshot())
@@ -353,8 +372,8 @@ func (a *App) syncMenu() {
 	c := a.snapshot()
 	check(m.enabled, c.Enabled)
 	check(m.maximized, c.Maximized.Enabled)
-	check(m.start, c.StartMenu.Enabled)
 	check(m.xamlFix, c.XamlFix)
+	check(m.surfTray, c.Surfaces.TrayOverflow.Enabled)
 	for k, it := range m.accents {
 		check(it, k == c.Default.Accent)
 	}
@@ -392,8 +411,8 @@ func (a *App) buildMenu(ctx context.Context) {
 	}
 
 	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
-	m.start = systray.AddMenuItemCheckbox("Styled Start menu", "Use the start_menu rule while Start is open", c.StartMenu.Enabled)
 	m.hotkey = systray.AddMenuItemCheckbox("Global hotkey ("+c.Hotkey+")", "Toggle TaskGlass from anywhere; set the keys in the config file", c.HotkeyEnabled)
+	m.surfTray = systray.AddMenuItemCheckbox("Translucent tray flyout", "Make the hidden-icons flyout (the ^ button) translucent; opacity is set in the config file", c.Surfaces.TrayOverflow.Enabled)
 	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
 	if a.xaml == nil {
 		m.xamlFix.Disable()
@@ -427,7 +446,7 @@ func (a *App) buildMenu(ctx context.Context) {
 	spawn(m.enabled.ClickedCh, flip(m.enabled, func(c *config.Config, on bool) { c.Enabled = on }))
 	spawn(m.hotkey.ClickedCh, flip(m.hotkey, func(c *config.Config, on bool) { c.HotkeyEnabled = on }))
 	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
-	spawn(m.start.ClickedCh, flip(m.start, func(c *config.Config, on bool) { c.StartMenu.Enabled = on }))
+	spawn(m.surfTray.ClickedCh, flip(m.surfTray, func(c *config.Config, on bool) { c.Surfaces.TrayOverflow.Enabled = on }))
 	spawn(m.xamlFix.ClickedCh, flip(m.xamlFix, func(c *config.Config, on bool) { c.XamlFix = on }))
 	for ac, it := range m.accents {
 		ac := ac

@@ -36,9 +36,8 @@ Each wake-up runs `taskbar.Manager.Tick`:
 
 1. finds all taskbars (new monitors and Explorer restarts are handled for free; vanished handles are dropped; taskbars no longer selected by `taskbars: primary` are handed back),
 2. only if a rule needs it, enumerates top-level windows once for monitors with a maximized, visible, non-cloaked, non-tool window, and reads the focused window's executable,
-3. checks whether the foreground window is the Start/Search host (`Windows.UI.Core.CoreWindow` owned by `StartMenuExperienceHost` / `SearchHost` / `SearchApp`),
-4. resolves each taskbar's appearance with `state.Resolve` (priority: master switch, Start menu, app rule, maximized, default) and resolves `auto` colours against the theme,
-5. applies it only if the resolved policy changed or `refresh_ms` elapsed.
+3. resolves each taskbar's appearance with `state.Resolve` (priority: master switch, app rule, maximized, default) and resolves `auto` colours against the theme,
+4. applies it only if the resolved policy changed or `refresh_ms` elapsed.
 
 With nothing happening the process sleeps in the scheduler: measured at 0.0 ms of CPU over 8 s.
 
@@ -65,6 +64,14 @@ Control channel: the named shared memory `Local\TaskGlass.Xaml.State.v1` holds t
 The BSTRs that XAML Diagnostics hands to the visual tree callback are owned by the callback and are freed there. The DLL's log is capped at 1 MiB because it lives inside Explorer.
 
 Debugging: create an empty `%LOCALAPPDATA%\TaskGlass\tap.dump` *before* the DLL is loaded and `tap.log` in the same folder records every visual tree change and scan. The DLL stays loaded until Explorer restarts.
+
+## The tray overflow flyout
+
+The same DLL controls one more XAML surface. The shared block has eight int32 slots: `[0]` taskbar fill, `[1]` status, `[2]` tray overflow flyout, `[7]` flyout tracked. Slot `[2]` holds `0` (leave alone) or `1 + opacity percent`; the DLL applies `opacity / 100` to the elements it tracks and `1.0` when told to leave them alone or when the block disappears. Slots `[3]` to `[6]` are unused and must stay `0`: copies of the DLL from unreleased builds can still be loaded in a running Explorer, and read them as the opacity of surfaces that no longer exist. Older DLLs read only slots 0 and 1, so the block stays compatible.
+
+The flyout is a separate XAML island inside Explorer, created the first time the `^` button is opened. It has a `Border` named `OverflowFlyoutBackgroundBorder`. Its tree is not reachable from the taskbar's (both islands live on the same UI thread, but the diagnostics replay only contains one root), so the DLL keeps the last eight live elements it saw as anchors, climbs from each to its tree root and scans every distinct root (the scan runs 250 ms after a burst of events ends, and every 5 s while something wanted is still missing). `IXamlDiagnostics::HitTest` returns `E_INVALIDARG` on this build, so enumerating trees from coordinates is not an option.
+
+If the island already exists when the DLL attaches, no event arrives for it by itself. `winapi.TrayProbe` provokes some: it adds a tray icon to a message-only window and removes it 400 ms later, which makes Explorer build and tear down a tray item and the tray's XAML emit events. The DLL sets slot `[7]` to 1 once it tracks the flyout, and `internal/xaml` stops probing (at most four attempts, six seconds apart, per Explorer process). Same-version restarts of TaskGlass need no probe because the DLL stays loaded and keeps its references.
 
 ## Appearance and assets
 

@@ -18,11 +18,13 @@ Changes made from the tray menu are saved to this same file.
   "theme": "auto",
   "taskbars": "all",
   "default":    { "accent": "clear",  "color": "auto", "opacity": 0 },
-  "maximized":  { "enabled": true,  "accent": "opaque",  "color": "auto", "opacity": 100 },
-  "start_menu": { "enabled": false, "accent": "acrylic", "color": "auto", "opacity": 60 },
+  "maximized":  { "enabled": false, "accent": "opaque",  "color": "auto", "opacity": 100 },
   "apps": [
     { "exe": "code.exe", "accent": "acrylic", "color": "#101828", "opacity": 55 }
   ],
+  "surfaces": {
+    "tray_overflow": { "enabled": true, "opacity": 10 }
+  },
   "tray_icon": "auto",
   "hotkey_enabled": false,
   "hotkey": "Ctrl+Alt+G",
@@ -42,9 +44,9 @@ Changes made from the tray menu are saved to this same file.
 | `theme` | `auto`, `light`, `dark` | Which colour mode drives `"auto"` colours and the tray icon. `auto` follows the Windows *system* theme (the one the taskbar uses). |
 | `taskbars` | `all`, `primary` | Style every monitor's taskbar or only the primary one. |
 | `default` | appearance | Used when no other rule matches. |
-| `maximized` | rule | Applies on a monitor that has a maximized window. |
-| `start_menu` | rule | Applies while the Start menu or Search has focus. |
+| `maximized` | rule | Applies on a monitor that has a maximized window. Off by default: the bar stays as transparent as without a maximized window. |
 | `apps` | list of app rules | Applies while the named application has focus (max 64, first match wins). |
+| `surfaces` | object | Currently only `tray_overflow`, see [Tray flyout](#tray-flyout). |
 | `tray_icon` | `auto`, `color`, `light`, `dark` | Notification-area icon. `auto` is a monochrome glyph that contrasts with the Windows theme; `color` is the full logo. |
 | `hotkey_enabled` | bool | Turns the global hotkey on. **Off by default**, so TaskGlass never grabs a shortcut you did not ask for. Also in the tray menu (**Global hotkey**). |
 | `hotkey` | string | The shortcut that toggles `enabled` while `hotkey_enabled` is `true`. Default `"Ctrl+Alt+G"`. Needs at least one of `Ctrl`, `Alt`, `Shift`, `Win` and a key `A-Z`, `0-9` or `F1-F24`. It is checked even while the hotkey is off, so a typo is reported right away. |
@@ -64,13 +66,24 @@ Changes made from the tray menu are saved to this same file.
 
 A **rule** is an appearance plus `enabled`. An **app rule** is an appearance plus `exe`, the executable file name such as `chrome.exe` (case-insensitive, no path). An app rule applies to the taskbar of the monitor where that application has focus.
 
+Opacity values accept decimals (`99.5`) and are rounded to a whole number.
+
+## Tray flyout
+
+`surfaces.tray_overflow` makes the flyout with the hidden tray icons (the `^` button) translucent: `{ "enabled": true, "opacity": N }`, where `opacity` is how opaque its background stays. `100` is the stock look and `0` removes the background completely (the icons then float over the desktop). It needs `taskglass_tap.dll` and `xaml_fix`, and a tray menu item turns it on or off.
+
+Why the DLL: the flyout draws its own XAML background, which the accent effect does not reach, so TaskGlass loads its helper DLL into Explorer to change it, the same way it removes the taskbar's own fill.
+
+## Windows setting that overrides the bar
+
+Keep *Show accent color on Start and taskbar* (Settings > Personalization > Colors) turned **off**. When it is on, Windows paints the taskbar with the accent color and overrides whatever TaskGlass sets, whatever the rules say.
+
 ## Which rule wins
 
 1. `enabled: false` → stock taskbar.
-2. `start_menu` (when enabled and the Start menu or Search has focus).
-3. The first matching entry in `apps`.
-4. `maximized` (when enabled and the taskbar's monitor has a maximized window).
-5. `default`.
+2. The first matching entry in `apps`.
+3. `maximized` (when enabled and the taskbar's monitor has a maximized window).
+4. `default`.
 
 ## Light and dark mode
 

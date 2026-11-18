@@ -8,7 +8,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-blue.svg" alt="Licencia: MIT"></a>
 </p>
 
-TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
+TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos, y hace translúcido también el desplegable con los iconos ocultos de la bandeja. Solo hace eso. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
 
 [Read in English](README.md)
 
@@ -16,6 +16,7 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 
 - Estilos **Clear / Blur / Acrylic / Opaque / Normal**, incluida la transparencia total en la barra XAML de Windows 11 (sin relleno gris ni línea de borde)
 - **Modo claro y oscuro**: los colores `auto` y el icono de bandeja siguen a Windows en vivo
+- **Desplegable de la bandeja translúcido**: el desplegable con los iconos ocultos (el botón `^`) tiene su propia opacidad
 - **Reglas inteligentes**: opaca con una ventana maximizada, otro aspecto con el menú Inicio abierto, o por aplicación (`code.exe`, `chrome.exe`, ...)
 - **Atajo global** para activar o desactivar el efecto (desactivado por defecto, se activa con un interruptor), e interruptor general
 - **Multimonitor**: cada barra por separado, o solo la principal
@@ -25,7 +26,9 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 
 ## Instalación
 
-Descarga el zip desde [Releases](https://github.com/AnderCMD/TaskGlass/releases), extráelo en una carpeta permanente (por ejemplo `%LOCALAPPDATA%\Programs\TaskGlass`) y ejecuta `taskglass.exe`. Deja `taskglass_tap.dll` en la misma carpeta: es lo que hace totalmente transparente a Windows 11 (ver [Cómo funciona](#cómo-funciona)). TaskGlass vive en el área de notificaciones; haz clic derecho en su icono.
+**Instalador (recomendado):** descarga `TaskGlass-<versión>-Setup.exe` desde [Releases](https://github.com/AnderCMD/TaskGlass/releases) y ejecútalo. Se instala por usuario (sin permisos de administrador), añade una entrada al menú Inicio, puede iniciar TaskGlass con Windows y su desinstalador restaura la barra. Inglés y español.
+
+**Portable:** descarga el zip, extráelo en una carpeta permanente (por ejemplo `%LOCALAPPDATA%\Programs\TaskGlass`) y ejecuta `taskglass.exe`. Deja `taskglass_tap.dll` en la misma carpeta: es lo que hace totalmente transparente a Windows 11 (ver [Cómo funciona](#cómo-funciona)). TaskGlass vive en el área de notificaciones; haz clic derecho en su icono.
 
 Compilar desde el código (Windows, Go 1.26+ y un compilador MinGW-w64 para la DLL, p. ej. `winget install MartinStorsjo.LLVM-MinGW.UCRT`):
 
@@ -61,19 +64,21 @@ Windows tiene una API de acento no documentada, `SetWindowCompositionAttribute`,
 
 Para quitar ese relleno, `taskglass_tap.dll` se carga dentro de `explorer.exe` mediante la API XAML Diagnostics, localiza los rectángulos `BackgroundFill` y `BackgroundStroke` de la barra y pone su opacidad a 0 mientras TaskGlass está en marcha. Si TaskGlass se cierra o falla, la DLL lo detecta y restaura el aspecto original por sí sola. Detalles en [docs/architecture.md](docs/architecture.md).
 
+## Antes de empezar
+
+**Desactiva** *Mostrar el color de énfasis en Inicio y en la barra de tareas* en Windows (Configuración > Personalización > Colores). Mientras esté activo, Windows pinta la barra con tu color de énfasis y anula el efecto que aplica TaskGlass, así que la barra no se verá transparente.
+
 ## Limitaciones y seguridad
 
 - Depende de funciones internas no documentadas de Windows. Una actualización puede romperlo; en ese caso la app sigue con efectos de acento (tintes y desenfoque) y registra el motivo.
 - Cargar código en Explorer es lo que las herramientas de seguridad llaman "inyección", y algunos antivirus pueden avisar. La DLL es pequeña y su código está en [native/tap](native/tap); puedes compilarla tú. Con `"xaml_fix": false` nunca se toca Explorer.
 - Verificado en Windows 11 compilación 26300 con un monitor y ocultado automático. Windows 10 (sin barra XAML) solo necesita la API de acento y no está probado; multimonitor tampoco. [Abre un issue](https://github.com/AnderCMD/TaskGlass/issues) indicando tu versión de Windows si algo se ve mal.
-- Aplicar cristal a las ventanas del Explorador de archivos o al propio menú Inicio aún no está soportado; ver la [hoja de ruta](#hoja-de-ruta).
 - Si la barra se ve mal: `taskglass.exe --restore`, o reinicia Explorer.
 
 ## Hoja de ruta
 
-- Cristal para las ventanas del Explorador de archivos y el menú Inicio
 - Verificación en Windows 10 y multimonitor
-- Instalador / paquete winget
+- Paquete winget
 
 ## Contribuir
 

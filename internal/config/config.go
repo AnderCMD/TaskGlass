@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -122,11 +123,31 @@ const (
 	autoLight = "#F3F3F3"
 )
 
+// Percent is a value from 0 to 100. In JSON it may be written with decimals
+// ("opacity": 99.5); it is rounded to the nearest whole number.
+type Percent int
+
+// UnmarshalJSON accepts any JSON number and rounds it.
+func (p *Percent) UnmarshalJSON(b []byte) error {
+	if string(bytes.TrimSpace(b)) == "null" {
+		return errors.New("must be a number between 0 and 100, not null")
+	}
+	var f float64
+	if err := json.Unmarshal(b, &f); err != nil {
+		return fmt.Errorf("must be a number between 0 and 100: %w", err)
+	}
+	if math.IsNaN(f) || math.IsInf(f, 0) || f < -1e6 || f > 1e6 {
+		return fmt.Errorf("%v is not a valid percentage", f)
+	}
+	*p = Percent(math.Round(f))
+	return nil
+}
+
 // Appearance describes how the taskbar should look in a given state.
 type Appearance struct {
-	Accent  Accent `json:"accent"`
-	Color   string `json:"color"`   // "#RRGGBB" or "auto"
-	Opacity int    `json:"opacity"` // 0 (invisible) .. 100 (fully opaque)
+	Accent  Accent  `json:"accent"`
+	Color   string  `json:"color"`   // "#RRGGBB" or "auto"
+	Opacity Percent `json:"opacity"` // 0 (invisible) .. 100 (fully opaque)
 }
 
 // RGB returns the tint colour for the given theme.
@@ -140,6 +161,36 @@ func (a Appearance) RGB(light bool) (r, g, b uint8) {
 	}
 	r, g, b, _ = ParseColor(c)
 	return r, g, b
+}
+
+// Surface controls the background opacity of a shell surface that accent
+// effects cannot reach (a flyout drawn by XAML inside Explorer). It needs
+// taskglass_tap.dll and xaml_fix.
+type Surface struct {
+	Enabled bool `json:"enabled"`
+	// Opacity of the surface background: 100 is the stock look, 0 removes the
+	// background entirely.
+	Opacity Percent `json:"opacity"`
+}
+
+// Validate checks a surface.
+func (s Surface) Validate() error {
+	if s.Opacity < 0 || s.Opacity > 100 {
+		return fmt.Errorf("opacity %d out of range [0, 100]", s.Opacity)
+	}
+	return nil
+}
+
+// Surfaces groups the optional shell surfaces.
+type Surfaces struct {
+	// TrayOverflow is the flyout that lists hidden tray icons (the ^ button).
+	TrayOverflow Surface `json:"tray_overflow"`
+
+	// LegacySurfaceStartMenu and LegacyExplorer are keys that existed in unreleased
+	// builds. They are still accepted so an old config keeps loading, ignored,
+	// and dropped on the next save.
+	LegacySurfaceStartMenu json.RawMessage `json:"start_menu_flyout,omitempty"`
+	LegacyExplorer         json.RawMessage `json:"explorer,omitempty"`
 }
 
 // Rule is an Appearance that only applies when Enabled is true.
@@ -170,10 +221,13 @@ type Config struct {
 	Default Appearance `json:"default"`
 	// Maximized applies on a monitor that has a maximized window.
 	Maximized Rule `json:"maximized"`
-	// StartMenu applies while the Start menu / Search is focused.
-	StartMenu Rule `json:"start_menu"`
+	// LegacyStartMenu is the removed Start menu rule. It is still accepted so an
+	// old config keeps loading, ignored, and dropped on the next save.
+	LegacyStartMenu json.RawMessage `json:"start_menu,omitempty"`
 	// Apps apply while the named application is focused (first match wins).
 	Apps []AppRule `json:"apps"`
+	// Surfaces are shell flyouts whose own background can be made translucent.
+	Surfaces Surfaces `json:"surfaces"`
 	// TrayIcon is the notification-area icon style.
 	TrayIcon TrayIcon `json:"tray_icon"`
 	// HotkeyEnabled turns the global hotkey on. It is off by default so
@@ -208,12 +262,11 @@ func Default() Config {
 		Taskbars: TaskbarsAll,
 		Default:  Appearance{Accent: AccentClear, Color: ColorAuto, Opacity: 0},
 		Maximized: Rule{
-			Enabled:    true,
+			Enabled:    false,
 			Appearance: Appearance{Accent: AccentOpaque, Color: ColorAuto, Opacity: 100},
 		},
-		StartMenu: Rule{
-			Enabled:    false,
-			Appearance: Appearance{Accent: AccentAcrylic, Color: ColorAuto, Opacity: 60},
+		Surfaces: Surfaces{
+			TrayOverflow: Surface{Enabled: true, Opacity: 10},
 		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
@@ -249,11 +302,15 @@ func (c Config) Validate() error {
 	}{
 		{"default", c.Default},
 		{"maximized", c.Maximized.Appearance},
-		{"start_menu", c.StartMenu.Appearance},
 	}
 	for _, k := range checks {
 		if err := k.a.Validate(); err != nil {
 			return fmt.Errorf("%s: %w", k.name, err)
+		}
+	}
+	for name, sf := range map[string]Surface{"tray_overflow": c.Surfaces.TrayOverflow} {
+		if err := sf.Validate(); err != nil {
+			return fmt.Errorf("surfaces.%s: %w", name, err)
 		}
 	}
 	if len(c.Apps) > MaxAppRules {
@@ -424,6 +481,7 @@ func Save(path string, c Config) error {
 	if err := c.Validate(); err != nil {
 		return err
 	}
+	c.LegacyStartMenu, c.Surfaces.LegacySurfaceStartMenu, c.Surfaces.LegacyExplorer = nil, nil, nil // dropped for good on the first save
 	data, err := json.MarshalIndent(c, "", "  ")
 	if err != nil {
 		return err
