@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.0.1] - 2026-11-17
 
 ### Changed
 - The global hotkey now has an explicit switch, `hotkey_enabled`, which is **off by default**; the shortcut itself (`hotkey`, default `Ctrl+Alt+G`) is preconfigured so enabling it is one change. It can also be toggled from the tray menu. The shortcut is validated even while disabled.
