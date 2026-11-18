@@ -10,14 +10,14 @@
 
 TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos, y hace translúcido también el desplegable con los iconos ocultos de la bandeja. Solo hace eso. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
 
-[Read in English](README.md)
+**Sitio web con descargas y guía paso a paso: [andercmd.github.io/TaskGlass](https://andercmd.github.io/TaskGlass/)** · [Read in English](README.md)
 
 ## Características
 
 - Estilos **Clear / Blur / Acrylic / Opaque / Normal**, incluida la transparencia total en la barra XAML de Windows 11 (sin relleno gris ni línea de borde)
-- **Modo claro y oscuro**: los colores `auto` y el icono de bandeja siguen a Windows en vivo
+- **Modo claro y oscuro**: los colores `auto`, el icono y el menú de la bandeja siguen a Windows en vivo
 - **Desplegable de la bandeja translúcido**: el desplegable con los iconos ocultos (el botón `^`) tiene su propia opacidad
-- **Reglas inteligentes**: opaca con una ventana maximizada, otro aspecto con el menú Inicio abierto, o por aplicación (`code.exe`, `chrome.exe`, ...)
+- **Reglas inteligentes**: un aspecto opcional con una ventana maximizada, o por aplicación (`code.exe`, `chrome.exe`, ...)
 - **Atajo global** para activar o desactivar el efecto (desactivado por defecto, se activa con un interruptor), e interruptor general
 - **Multimonitor**: cada barra por separado, o solo la principal
 - **Por eventos**: reacciona a eventos de ventana en lugar de sondear, cerca de 0 % de CPU en reposo
@@ -74,6 +74,10 @@ Para quitar ese relleno, `taskglass_tap.dll` se carga dentro de `explorer.exe` m
 - Cargar código en Explorer es lo que las herramientas de seguridad llaman "inyección", y algunos antivirus pueden avisar. La DLL es pequeña y su código está en [native/tap](native/tap); puedes compilarla tú. Con `"xaml_fix": false` nunca se toca Explorer.
 - Verificado en Windows 11 compilación 26300 con un monitor y ocultado automático. Windows 10 (sin barra XAML) solo necesita la API de acento y no está probado; multimonitor tampoco. [Abre un issue](https://github.com/AnderCMD/TaskGlass/issues) indicando tu versión de Windows si algo se ve mal.
 - Si la barra se ve mal: `taskglass.exe --restore`, o reinicia Explorer.
+
+## Sitio web
+
+La carpeta `site/` es una página estática bilingüe (español/inglés) para quien no conoce GitHub: descargas del instalador y de la versión portable (se leen del último release), pasos de instalación y preguntas frecuentes. `.github/workflows/pages.yml` la publica en GitHub Pages cada vez que `main` la cambia.
 
 ## Hoja de ruta
 

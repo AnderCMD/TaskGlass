@@ -33,7 +33,7 @@ powershell -File scripts/build-installer.ps1 -Version X.Y.Z   # setup.exe (needs
 Rules of thumb:
 
 - Keep Win32 calls inside `internal/winapi`. Put decisions in `internal/state` and `internal/config` so they stay unit-testable.
-- Add or update tests for behaviour changes; update `docs/` and `CHANGELOG.md`.
+- Add or update tests for behaviour changes; update `docs/` and `CHANGELOG.md`. Changes to the website live in `site/` and go live when merged into `main`.
 - The native TAP runs inside `explorer.exe`: keep it small, check every HRESULT, never touch XAML objects off the UI thread, and never crash. Test changes on a real machine and mention the Windows build.
 - Never leave the taskbar modified on a failure path: anything that applies an effect must be undone by `Restore`.
 - Conventional-style commit messages (`feat:`, `fix:`, `docs:`...) are appreciated.

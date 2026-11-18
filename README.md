@@ -10,14 +10,14 @@
 
 TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, so only the icons remain, and makes the flyout with the hidden tray icons translucent too. That is all it does. It is a small tray app written in Go (no cgo) plus a native helper DLL, with no runtime to install. It follows Windows' light and dark mode.
 
-[Leer en español](README.es.md)
+**Website with downloads and a step-by-step guide: [andercmd.github.io/TaskGlass](https://andercmd.github.io/TaskGlass/)** · [Leer en español](README.es.md)
 
 ## Features
 
 - **Clear / Blur / Acrylic / Opaque / Normal** styles, including truly transparent on the Windows 11 XAML taskbar (no grey fill, no border line)
-- **Light and dark aware**: `auto` colours and the tray icon follow Windows, live
+- **Light and dark aware**: `auto` colours, the tray icon and its right-click menu follow Windows, live
 - **Translucent tray flyout**: the flyout with the hidden icons (the `^` button) gets its own opacity
-- **Smart rules**: an optional look when a window is maximized, or per application (`code.exe`, `chrome.exe`, ...)
+- **Transparent by default, everywhere**: also with a maximized window; an optional look when one is maximized, or per application (`code.exe`, `chrome.exe`, ...)
 - **Global hotkey** to toggle the effect (off by default, one switch to enable), and a master on/off switch
 - **Multi-monitor**: every taskbar handled independently, or only the primary one
 - **Event driven**: reacts to window events instead of polling, about 0 % CPU when idle
@@ -74,6 +74,10 @@ Turn **off** *Show accent color on Start and taskbar* in Windows (Settings > Per
 - Loading code into Explorer is what security tools call "injection" and some antivirus products may flag it. The DLL is small and its source is in [native/tap](native/tap); you can build it yourself. Set `"xaml_fix": false` to never touch Explorer.
 - Verified on Windows 11 build 26300 with a single monitor and auto-hide enabled. Windows 10 (no XAML taskbar) only needs the accent API and is untested; so are multi-monitor setups. Please [open an issue](https://github.com/AnderCMD/TaskGlass/issues) with your Windows build if something looks off.
 - If the taskbar ever looks wrong: `taskglass.exe --restore`, or restart Explorer.
+
+## Website
+
+The `site/` folder is a static bilingual page (Spanish/English) for people who are not familiar with GitHub: installer and portable downloads (resolved from the latest release), install steps and an FAQ. It is published to GitHub Pages by `.github/workflows/pages.yml` whenever `main` changes it.
 
 ## Roadmap
 
