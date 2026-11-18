@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/AnderCMD/TaskGlass/actions/workflows/ci.yml"><img src="https://github.com/AnderCMD/TaskGlass/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/AnderCMD/TaskGlass/releases/latest"><img src="https://img.shields.io/github/v/release/AnderCMD/TaskGlass" alt="Última versión"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-MIT-blue.svg" alt="Licencia: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/licencia-Apache%202.0-blue.svg" alt="Licencia: Apache 2.0"></a>
 </p>
 
 TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con desenfoque o acrílica**, de modo que solo se vean los iconos, y hace translúcido también el desplegable con los iconos ocultos de la bandeja. Solo hace eso. Es una app de bandeja pequeña escrita en Go (sin cgo) más una DLL nativa auxiliar, sin runtime que instalar. Sigue el modo claro y oscuro de Windows.
@@ -90,4 +90,4 @@ Ver [CONTRIBUTING.md](CONTRIBUTING.md). Seguridad: [SECURITY.md](SECURITY.md).
 
 ## Licencia
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE). Ver también [NOTICE](NOTICE).

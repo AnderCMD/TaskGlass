@@ -64,6 +64,7 @@ spanish.LaunchNow=Iniciar TaskGlass ahora
 Source: "{#DistDir}\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#DistDir}\taskglass_tap.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\NOTICE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\README.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\docs\config.schema.json"; DestDir: "{app}"; Flags: ignoreversion
 

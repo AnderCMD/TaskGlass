@@ -5,7 +5,7 @@
 <p align="center">
   <a href="https://github.com/AnderCMD/TaskGlass/actions/workflows/ci.yml"><img src="https://github.com/AnderCMD/TaskGlass/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/AnderCMD/TaskGlass/releases/latest"><img src="https://img.shields.io/github/v/release/AnderCMD/TaskGlass" alt="Latest release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg" alt="License: Apache 2.0"></a>
 </p>
 
 TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, so only the icons remain, and makes the flyout with the hidden tray icons translucent too. That is all it does. It is a small tray app written in Go (no cgo) plus a native helper DLL, with no runtime to install. It follows Windows' light and dark mode.
@@ -90,4 +90,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [SECURITY.md](SECURITY.
 
 ## License
 
-[MIT](LICENSE)
+[Apache License 2.0](LICENSE). See also [NOTICE](NOTICE).
