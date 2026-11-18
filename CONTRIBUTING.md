@@ -27,6 +27,7 @@ Other generated files (outputs are committed, run these only when their inputs c
 ```bash
 powershell -File scripts/render-assets.ps1    # logo, banner, social preview, icons (needs Edge)
 powershell -File scripts/gen-resources.ps1    # exe icon, version info, manifest (needs windres)
+powershell -File scripts/build-installer.ps1 -Version X.Y.Z   # setup.exe (needs Inno Setup: winget install JRSoftware.InnoSetup)
 ```
 
 Rules of thumb:

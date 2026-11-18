@@ -25,7 +25,9 @@ TaskGlass makes the Windows taskbar **fully transparent, blurred or acrylic**, s
 
 ## Install
 
-Download the zip from the [Releases](https://github.com/AnderCMD/TaskGlass/releases) page, extract it somewhere permanent (for example `%LOCALAPPDATA%\Programs\TaskGlass`) and run `taskglass.exe`. Keep `taskglass_tap.dll` in the same folder: it is what makes Windows 11 fully transparent (see [How it works](#how-it-works)). TaskGlass lives in the notification area; right-click its icon.
+**Installer (recommended):** download `TaskGlass-<version>-Setup.exe` from the [Releases](https://github.com/AnderCMD/TaskGlass/releases) page and run it. It installs per user (no administrator rights), adds a Start menu entry, can start TaskGlass with Windows, and its uninstaller restores your taskbar. English and Spanish.
+
+**Portable:** download the zip, extract it somewhere permanent (for example `%LOCALAPPDATA%\Programs\TaskGlass`) and run `taskglass.exe`. Keep `taskglass_tap.dll` in the same folder: it is what makes Windows 11 fully transparent (see [How it works](#how-it-works)). TaskGlass lives in the notification area; right-click its icon.
 
 Build from source (Windows, Go 1.26+, and a MinGW-w64 compiler for the helper DLL, e.g. `winget install MartinStorsjo.LLVM-MinGW.UCRT`):
 
@@ -73,7 +75,7 @@ To remove that fill, `taskglass_tap.dll` is loaded into `explorer.exe` through t
 
 - Glass for File Explorer windows and the Start menu flyout
 - Windows 10 and multi-monitor verification
-- Installer / winget package
+- winget package
 
 ## Contributing
 

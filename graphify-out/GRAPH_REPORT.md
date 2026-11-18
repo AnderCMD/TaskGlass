@@ -1,16 +1,16 @@
 # Graph Report - TaskGlass  (2026-11-17)
 
 ## Corpus Check
-- 37 files · ~51,727 words
+- 38 files · ~52,003 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 468 nodes · 787 edges · 34 communities (29 shown, 5 thin omitted)
+- 472 nodes · 790 edges · 36 communities (31 shown, 5 thin omitted)
 - Extraction: 93% EXTRACTED · 7% INFERRED · 0% AMBIGUOUS · INFERRED: 57 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `95edb79e`
+- Built from commit: `928fb309`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -44,6 +44,7 @@
 - start_menu
 - render-assets.ps1
 - apply-baseline.sh
+- main.go
 
 ## God Nodes (most connected - your core abstractions)
 1. `App` - 30 edges
@@ -66,17 +67,17 @@
   cmd/taskglass/main_windows.go → internal/config/config.go
 - `main()` --calls--> `Save()`  [INFERRED]
   cmd/taskglass/main_windows.go → internal/config/config.go
-- `watchForQuit()` --references--> `App`  [EXTRACTED]
-  cmd/taskglass/main_windows.go → internal/app/app_windows.go
+- `main()` --calls--> `Parse()`  [INFERRED]
+  tools/genicon/main.go → internal/config/config.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (34 total, 5 thin omitted)
+## Communities (36 total, 5 thin omitted)
 
 ### Community 0 - "Config"
-Cohesion: 0.08
-Nodes (43): Accent, Appearance, AppRule, Config, Rule, Taskbars, Theme, TrayIcon (+35 more)
+Cohesion: 0.09
+Nodes (40): Accent, Appearance, AppRule, Config, Rule, Taskbars, Theme, TrayIcon (+32 more)
 
 ### Community 1 - "README.md"
 Cohesion: 0.05
@@ -111,8 +112,8 @@ Cohesion: 0.07
 Nodes (27): description, enum, type, additionalProperties, type, description, pattern, type (+19 more)
 
 ### Community 9 - "[1.0.0] - 2026-11-17"
-Cohesion: 0.22
-Nodes (8): [1.0.0] - 2026-11-17, Added, Changed, Changed, Changelog, Fixed, Known limitations, [Unreleased]
+Cohesion: 0.17
+Nodes (11): [1.0.0] - 2026-11-17, [1.0.1] - 2026-11-17, [1.0.2] - 2026-11-17, Added, Added, Changed, Changed, Changed (+3 more)
 
 ### Community 10 - "theme"
 Cohesion: 0.16
@@ -170,8 +171,12 @@ Nodes (3): command(), Enabled(), Set()
 Cohesion: 0.67
 Nodes (3): start_menu, description, $ref
 
+### Community 34 - "main.go"
+Cohesion: 0.83
+Nodes (3): entry, main(), writeICO()
+
 ## Knowledge Gaps
-- **136 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+131 more)
+- **138 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+133 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -179,15 +184,15 @@ Nodes (3): start_menu, description, $ref
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `properties` connect `properties` to `hotkey_enabled`, `items`, `config.schema.json`, `theme`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `version`, `xaml_fix`, `start_menu`?**
-  _High betweenness centrality (0.067) - this node is a cross-community bridge._
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Why does `App` connect `App` to `Config`, `winapi_windows.go`, `Controller`, `main`, `Watcher`?**
-  _High betweenness centrality (0.066) - this node is a cross-community bridge._
+  _High betweenness centrality (0.065) - this node is a cross-community bridge._
 - **Why does `Config` connect `Config` to `winapi_windows.go`, `App`?**
   _High betweenness centrality (0.053) - this node is a cross-community bridge._
 - **What connects `$schema`, `$id`, `title` to the rest of the system?**
-  _136 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _138 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Config` be split into smaller, more focused modules?**
-  _Cohesion score 0.08145363408521303 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.0899854862119013 - nodes in this community are weakly interconnected._
 - **Should `README.md` be split into smaller, more focused modules?**
   _Cohesion score 0.05094130675526024 - nodes in this community are weakly interconnected._
 - **Should `winapi_windows.go` be split into smaller, more focused modules?**

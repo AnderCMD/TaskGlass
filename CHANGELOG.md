@@ -2,6 +2,15 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [1.0.2] - 2026-11-17
+
+### Added
+- **Windows installer** (`TaskGlass-<version>-Setup.exe`, Inno Setup): per-user, no administrator rights, English and Spanish, optional start with Windows and desktop shortcut. Uninstalling asks the running TaskGlass to quit, restores the taskbar and offers to delete settings.
+- `scripts/build-installer.ps1`; the release workflow now publishes the installer and checksums for both files.
+
+### Changed
+- GitHub Actions bumped: `checkout` 7, `setup-go` 6, `upload-artifact` 7.
+
 ## [1.0.1] - 2026-11-17
 
 ### Changed

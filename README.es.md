@@ -25,7 +25,9 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 
 ## Instalación
 
-Descarga el zip desde [Releases](https://github.com/AnderCMD/TaskGlass/releases), extráelo en una carpeta permanente (por ejemplo `%LOCALAPPDATA%\Programs\TaskGlass`) y ejecuta `taskglass.exe`. Deja `taskglass_tap.dll` en la misma carpeta: es lo que hace totalmente transparente a Windows 11 (ver [Cómo funciona](#cómo-funciona)). TaskGlass vive en el área de notificaciones; haz clic derecho en su icono.
+**Instalador (recomendado):** descarga `TaskGlass-<versión>-Setup.exe` desde [Releases](https://github.com/AnderCMD/TaskGlass/releases) y ejecútalo. Se instala por usuario (sin permisos de administrador), añade una entrada al menú Inicio, puede iniciar TaskGlass con Windows y su desinstalador restaura la barra. Inglés y español.
+
+**Portable:** descarga el zip, extráelo en una carpeta permanente (por ejemplo `%LOCALAPPDATA%\Programs\TaskGlass`) y ejecuta `taskglass.exe`. Deja `taskglass_tap.dll` en la misma carpeta: es lo que hace totalmente transparente a Windows 11 (ver [Cómo funciona](#cómo-funciona)). TaskGlass vive en el área de notificaciones; haz clic derecho en su icono.
 
 Compilar desde el código (Windows, Go 1.26+ y un compilador MinGW-w64 para la DLL, p. ej. `winget install MartinStorsjo.LLVM-MinGW.UCRT`):
 
@@ -73,7 +75,7 @@ Para quitar ese relleno, `taskglass_tap.dll` se carga dentro de `explorer.exe` m
 
 - Cristal para las ventanas del Explorador de archivos y el menú Inicio
 - Verificación en Windows 10 y multimonitor
-- Instalador / paquete winget
+- Paquete winget
 
 ## Contribuir
 
