@@ -2,6 +2,12 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Code signing in the release workflow.** The release now signs `taskglass.exe`, `taskglass_tap.dll` and the installer through the free SignPath Foundation programme for open-source projects, verifies every signature and fails the release if one is invalid. It stays off (releases remain unsigned) until the repository has the `SIGNPATH_ORGANIZATION_ID` variable and the `SIGNPATH_API_TOKEN` secret; setup is in `docs/code-signing.md`.
+- The release zip now also includes the Spanish license text (`LICENSE.es.txt`).
+
 ## [1.3.1] - 2026-11-20
 
 ### Changed

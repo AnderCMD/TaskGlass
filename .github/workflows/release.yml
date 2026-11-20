@@ -7,24 +7,106 @@ on:
 permissions:
   contents: write
 
+# Code signing is free for open-source projects through the SignPath Foundation
+# (see docs/code-signing.md). It switches on by itself once the repository has
+# the variable SIGNPATH_ORGANIZATION_ID and the secret SIGNPATH_API_TOKEN; until
+# then the release is built exactly as before, unsigned.
+env:
+  SIGNPATH_PROJECT: ${{ vars.SIGNPATH_PROJECT_SLUG || 'TaskGlass' }}
+  SIGNPATH_POLICY: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG || 'release-signing' }}
+
 jobs:
   release:
     runs-on: windows-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
       - run: go test ./...
-      - name: Build
+
+      - name: Build binaries
         shell: pwsh
         run: |
           $v = "${{ github.ref_name }}".TrimStart("v")
           $env:GOOS = "windows"; $env:GOARCH = "amd64"
           go build -ldflags "-H=windowsgui -s -w -X main.version=$v" -o dist/taskglass.exe ./cmd/taskglass
           ./scripts/build-tap.ps1
-          Compress-Archive -Path dist/taskglass.exe, dist/taskglass_tap.dll, LICENSE, NOTICE, README.md -DestinationPath "dist/taskglass-$v-windows-amd64.zip"
+
+      # --- sign taskglass.exe and taskglass_tap.dll (only when SignPath is set up)
+      - name: Upload unsigned binaries
+        id: unsigned-binaries
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-binaries
+          path: |
+            dist/taskglass.exe
+            dist/taskglass_tap.dll
+      - name: Sign binaries
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ env.SIGNPATH_PROJECT }}
+          signing-policy-slug: ${{ env.SIGNPATH_POLICY }}
+          artifact-configuration-slug: binaries
+          github-artifact-id: ${{ steps.unsigned-binaries.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed/binaries
+      - name: Use the signed binaries
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          Copy-Item signed/binaries/taskglass.exe, signed/binaries/taskglass_tap.dll dist/ -Force
+          foreach ($f in "dist/taskglass.exe", "dist/taskglass_tap.dll") {
+            $s = Get-AuthenticodeSignature $f
+            if ($s.Status -ne "Valid") { throw "$f is not validly signed: $($s.Status)" }
+          }
+
+      - name: Package (zip and installer)
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart("v")
+          Compress-Archive -Path dist/taskglass.exe, dist/taskglass_tap.dll, LICENSE, LICENSE.es.txt, NOTICE, README.md -DestinationPath "dist/taskglass-$v-windows-amd64.zip"
           ./scripts/build-installer.ps1 -Version $v
+
+      # --- sign the installer too
+      - name: Upload unsigned installer
+        id: unsigned-installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-installer
+          path: dist/*-Setup.exe
+      - name: Sign installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ env.SIGNPATH_PROJECT }}
+          signing-policy-slug: ${{ env.SIGNPATH_POLICY }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-installer.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 3600
+          output-artifact-directory: signed/installer
+      - name: Use the signed installer
+        if: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+        shell: pwsh
+        run: |
+          Copy-Item (Get-ChildItem signed/installer/*-Setup.exe).FullName dist/ -Force
+          $f = Get-ChildItem dist/*-Setup.exe
+          $s = Get-AuthenticodeSignature $f.FullName
+          if ($s.Status -ne "Valid") { throw "$($f.Name) is not validly signed: $($s.Status)" }
+
+      - name: Checksums
+        shell: pwsh
+        run: |
           Get-ChildItem dist/*.zip, dist/*-Setup.exe | ForEach-Object {
             "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)"
           } | Out-File dist/SHA256SUMS.txt -Encoding ascii
