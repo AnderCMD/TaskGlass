@@ -12,7 +12,7 @@
   "10": "tray_icon",
   "11": "PULL_REQUEST_TEMPLATE.md",
   "12": "definitions",
-  "13": "preview.go",
+  "13": "config.go",
   "14": "assets.go",
   "15": "bug_report.md",
   "16": "feature_request.md",
@@ -40,12 +40,16 @@
   "38": "Contributing",
   "39": "Security Policy",
   "40": "default",
-  "41": "apps",
+  "41": "fakeHost",
   "42": "enabled",
   "43": "hotkey",
   "44": "enum",
   "45": "theme",
-  "46": "window",
+  "46": "Server",
+  "47": "exe",
   "48": "autostart_windows.go",
-  "50": "language"
+  "49": "xaml_fix",
+  "50": "language",
+  "51": "main.go",
+  "52": "locale_other.go"
 }
