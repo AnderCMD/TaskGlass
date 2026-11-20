@@ -121,6 +121,16 @@ func (m *Manager) restoreOne(h winapi.HWND) {
 	winapi.Redraw(h)
 }
 
+// blurViaAcrylic is true where the classic blur-behind accent is unusable
+// (Windows 11, build 22000 and later).
+var blurViaAcrylic = winapi.BlurNeedsAcrylic()
+
+// lighten mixes a colour towards white by t (0..1).
+func lighten(r, g, b uint8, t float64) (uint8, uint8, uint8) {
+	f := func(c uint8) uint8 { return uint8(float64(c) + (255-float64(c))*t + 0.5) }
+	return f(r), f(g), f(b)
+}
+
 // toPolicy converts an Appearance to an accent state and 0xAABBGGRR colour.
 func toPolicy(ap config.Appearance, light bool) policy {
 	if ap.Accent == config.AccentNormal {
@@ -136,6 +146,18 @@ func toPolicy(ap config.Appearance, light bool) policy {
 			alpha = 1 // alpha 0 renders opaque black on some builds
 		}
 	case config.AccentBlur:
+		if blurViaAcrylic {
+			// Windows 11 draws the classic blur-behind accent as solid black, so
+			// blur is produced by the acrylic backdrop. That backdrop takes its
+			// brightness from the tint colour and ignores the alpha, so the
+			// strength is applied by mixing the tint towards white: 0 is a light
+			// frosted glass, 100 the full tint colour.
+			st = winapi.AccentEnableAcrylicBlurBG
+			mix := 0.5 * (1 - float64(ap.Opacity)/100)
+			r, g, b = lighten(r, g, b, mix)
+			alpha = 1
+			break
+		}
 		st = winapi.AccentEnableBlurBehind
 		if alpha == 0 {
 			alpha = 1 // same quirk as clear: a fully zero tint can render opaque black
