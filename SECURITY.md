@@ -6,7 +6,7 @@ Please do **not** open a public issue. Use GitHub's private vulnerability report
 
 ## Scope
 
-TaskGlass runs with user privileges, makes no network connections and only touches: its config and log files under the user profile, the `HKCU\...\Run\TaskGlass` registry value (when autostart is enabled), and the appearance of the Explorer taskbar windows. Reports about anything beyond that are welcome.
+TaskGlass runs with user privileges, makes a single kind of network connection, to GitHub, to look for and download new releases (once a day; turn it off with `"updates": "off"`, see [Updates](docs/configuration.md#updates)), and only touches: its config and log files under the user profile, the `HKCU\...\Run\TaskGlass` registry value (when autostart is enabled), and the appearance of the Explorer taskbar windows. Reports about anything beyond that are welcome.
 
 ## Supported versions
 

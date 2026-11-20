@@ -18,6 +18,7 @@ TaskGlass vuelve la barra de tareas de Windows **totalmente transparente, con de
 - **Modo claro y oscuro**: los colores `auto`, el icono y el menú de la bandeja siguen a Windows en vivo
 - **Desplegable de la bandeja translúcido**: el desplegable con los iconos ocultos (el botón `^`) tiene su propia opacidad
 - **Reglas inteligentes**: un aspecto opcional con una ventana maximizada, o por aplicación (`code.exe`, `chrome.exe`, ...)
+- **Actualizaciones automáticas**: consulta GitHub una vez al día e instala la versión nueva tras tu confirmación (o sola, o nunca; tú eliges). Antes se verifica el instalador con la suma de comprobación de la release
 - **Atajo global** para activar o desactivar el efecto (desactivado por defecto, se activa con un interruptor), e interruptor general
 - **Multimonitor**: cada barra por separado, o solo la principal
 - **Por eventos**: reacciona a eventos de ventana en lugar de sondear, cerca de 0 % de CPU en reposo

@@ -173,6 +173,25 @@ type Surface struct {
 	// Opacity of the surface background: 100 is the stock look, 0 removes the
 	// background entirely.
 	Opacity Percent `json:"opacity"`
+	// Maximized replaces Opacity while a window is maximized or fullscreen.
+	Maximized SurfaceMaximized `json:"maximized"`
+}
+
+// SurfaceMaximized is the opacity a surface uses while a window is maximized
+// or fullscreen on any monitor (for example a more solid panel over a bright
+// window).
+type SurfaceMaximized struct {
+	Enabled bool    `json:"enabled"`
+	Opacity Percent `json:"opacity"`
+}
+
+// Effective returns the opacity to apply given whether a window is maximized
+// or fullscreen.
+func (s Surface) Effective(maximized bool) Percent {
+	if maximized && s.Maximized.Enabled {
+		return s.Maximized.Opacity
+	}
+	return s.Opacity
 }
 
 // Validate checks a surface.
@@ -180,7 +199,32 @@ func (s Surface) Validate() error {
 	if s.Opacity < 0 || s.Opacity > 100 {
 		return fmt.Errorf("opacity %d out of range [0, 100]", s.Opacity)
 	}
+	if s.Maximized.Opacity < 0 || s.Maximized.Opacity > 100 {
+		return fmt.Errorf("maximized opacity %d out of range [0, 100]", s.Maximized.Opacity)
+	}
 	return nil
+}
+
+// UpdateMode says what TaskGlass does about new releases.
+type UpdateMode string
+
+const (
+	UpdatesOff    UpdateMode = "off"    // never contact GitHub
+	UpdatesNotify UpdateMode = "notify" // check, then ask before installing
+	UpdatesAuto   UpdateMode = "auto"   // check and install without asking
+)
+
+// UpdateModes lists the valid modes, in menu order.
+var UpdateModes = []UpdateMode{UpdatesNotify, UpdatesAuto, UpdatesOff}
+
+// Valid reports whether m is a known mode.
+func (m UpdateMode) Valid() bool {
+	for _, k := range UpdateModes {
+		if m == k {
+			return true
+		}
+	}
+	return false
 }
 
 // Surfaces groups the optional shell surfaces.
@@ -217,6 +261,8 @@ type Config struct {
 	Enabled bool `json:"enabled"`
 	// Language of the tray menu and settings window: auto (follow Windows), en or es.
 	Language i18n.Lang `json:"language"`
+	// Updates is what to do about new releases: notify (default), auto or off.
+	Updates UpdateMode `json:"updates"`
 	// Theme drives "auto" colours and the tray icon.
 	Theme Theme `json:"theme"`
 	// Taskbars selects which taskbars are styled: all monitors or the primary.
@@ -263,6 +309,7 @@ func Default() Config {
 		Version:  CurrentVersion,
 		Enabled:  true,
 		Language: i18n.Auto,
+		Updates:  UpdatesNotify,
 		Theme:    ThemeAuto,
 		Taskbars: TaskbarsAll,
 		Default:  Appearance{Accent: AccentClear, Color: ColorAuto, Opacity: 0},
@@ -271,7 +318,7 @@ func Default() Config {
 			Appearance: Appearance{Accent: AccentOpaque, Color: ColorAuto, Opacity: 100},
 		},
 		Surfaces: Surfaces{
-			TrayOverflow: Surface{Enabled: true, Opacity: 10},
+			TrayOverflow: Surface{Enabled: true, Opacity: 10, Maximized: SurfaceMaximized{Enabled: false, Opacity: 85}},
 		},
 		Apps:     []AppRule{},
 		TrayIcon: TrayAuto,
@@ -294,6 +341,9 @@ func (c Config) Validate() error {
 	}
 	if !c.Language.Valid() {
 		return fmt.Errorf("language %q must be auto, en or es", c.Language)
+	}
+	if !c.Updates.Valid() {
+		return fmt.Errorf("updates %q must be notify, auto or off", c.Updates)
 	}
 	if !c.Theme.Valid() {
 		return fmt.Errorf("theme %q must be auto, light or dark", c.Theme)

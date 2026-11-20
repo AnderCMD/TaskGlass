@@ -26,6 +26,8 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/settings"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
 	"github.com/AnderCMD/TaskGlass/internal/theme"
+	"github.com/AnderCMD/TaskGlass/internal/ui"
+	"github.com/AnderCMD/TaskGlass/internal/update"
 	"github.com/AnderCMD/TaskGlass/internal/winapi"
 	"github.com/AnderCMD/TaskGlass/internal/xaml"
 )
@@ -58,6 +60,10 @@ type App struct {
 	kick        chan struct{} // asks the loop for an immediate update
 
 	srv      *settings.Server
+	warning  atomic.Bool // a "cannot open settings" box is showing
+	upd      updater
+	native   *ui.UI
+	lastURL  atomic.Value // web settings URL, for the last-resort message
 	menu     menuItems
 	cancel   context.CancelFunc
 	done     chan struct{}
@@ -68,7 +74,7 @@ type App struct {
 type menuItems struct {
 	title, enabled, hotkey, maximized, xamlFix, autostart *systray.MenuItem
 	settings, styleMenu, themeMenu, langMenu              *systray.MenuItem
-	surfTray, openCfg, openLog, reload, quit              *systray.MenuItem
+	surfTray, openCfg, openLog, reload, quit, update      *systray.MenuItem
 	accents                                               map[config.Accent]*systray.MenuItem
 	themes                                                map[config.Theme]*systray.MenuItem
 	langs                                                 map[i18n.Lang]*systray.MenuItem
@@ -83,6 +89,16 @@ func New(o Options) *App {
 	}
 	a.systemLight.Store(theme.SystemIsLight())
 	a.srv = settings.New(host{a})
+	a.native = ui.New(host{a})
+	a.native.OnError = func(err error) {
+		a.Log.Error("native settings window", "err", err)
+		url, _ := a.lastURL.Load().(string)
+		if url != "" {
+			a.warnSettings("ui.openFailed", url)
+		} else {
+			a.warnSettings("ui.serverFailed", "")
+		}
+	}
 	if autostart.Repair(exe) {
 		o.Log.Info("autostart entry repaired")
 	}
@@ -153,6 +169,8 @@ func (a *App) apply(fn func(*config.Config)) error {
 // lang is the language the UI currently uses.
 func (a *App) lang() i18n.Lang { return i18n.Resolve(a.snapshot().Language, i18n.SystemLocale()) }
 
+func (a *App) tr(key string) string { return i18n.T(a.lang(), key) }
+
 // OpenSettings shows the settings window (starting its local server on first use).
 func (a *App) OpenSettings() {
 	if a.srv == nil {
@@ -161,6 +179,7 @@ func (a *App) OpenSettings() {
 	url, err := a.srv.URL()
 	if err != nil {
 		a.Log.Error("settings server", "err", err)
+		a.showNative("")
 		return
 	}
 	profile := filepath.Join(os.TempDir(), "TaskGlass-ui")
@@ -169,7 +188,34 @@ func (a *App) OpenSettings() {
 	}
 	if err := settings.Show(url, profile); err != nil {
 		a.Log.Error("open settings window", "err", err)
+		// Typically a security product blocking TaskGlass from starting programs.
+		a.showNative(url)
 	}
+}
+
+// showNative opens the native Win32 settings window, which needs neither a
+// browser nor a local port. It is the way in when the web window cannot start.
+func (a *App) showNative(webURL string) {
+	a.Log.Info("opening the native settings window instead")
+	a.lastURL.Store(webURL)
+	if a.native != nil {
+		a.native.Show()
+	}
+}
+
+// warnSettings tells the user the settings window could not be opened. When
+// url is set it is copied to the clipboard first. Only one box is shown at a time.
+func (a *App) warnSettings(key, url string) {
+	if !a.warning.CompareAndSwap(false, true) {
+		return
+	}
+	if url != "" {
+		settings.CopyToClipboard(url)
+	}
+	go func() {
+		defer a.warning.Store(false)
+		settings.Notify("TaskGlass", a.tr(key))
+	}()
 }
 
 // host adapts App to settings.Host.
@@ -196,10 +242,12 @@ func (h host) OpenFile(which string) error {
 	}
 	return exec.Command("notepad.exe", path).Start()
 }
-func (h host) Version() string        { return h.a.Version }
-func (h host) ConfigPath() string     { return h.a.CfgPath }
-func (h host) XamlAvailable() bool    { return h.a.xaml != nil }
-func (h host) BlurNeedsAcrylic() bool { return winapi.BlurNeedsAcrylic() }
+func (h host) Version() string                   { return h.a.Version }
+func (h host) ConfigPath() string                { return h.a.CfgPath }
+func (h host) XamlAvailable() bool               { return h.a.xaml != nil }
+func (h host) BlurNeedsAcrylic() bool            { return winapi.BlurNeedsAcrylic() }
+func (h host) CheckUpdate() (update.Info, error) { return h.a.CheckUpdate() }
+func (h host) InstallUpdate() error              { return h.a.InstallUpdate() }
 
 // reload re-reads the config file if it changed on disk.
 func (a *App) reload() {
@@ -304,7 +352,7 @@ func (a *App) loop(ctx context.Context) {
 			if a.xaml != nil {
 				on := c.Enabled && c.XamlFix
 				a.xaml.SetHide(on && styled)
-				a.xaml.SetOverflow(xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, int(c.Surfaces.TrayOverflow.Opacity)))
+				a.xaml.SetOverflow(xaml.Encode(on && c.Surfaces.TrayOverflow.Enabled, int(c.Surfaces.TrayOverflow.Effective(a.mgr.AnyMaximized()))))
 			}
 		}) {
 			a.Log.Error("too many internal errors; restoring the taskbar and exiting")
@@ -385,6 +433,9 @@ func (a *App) onReady() {
 
 	a.buildMenu(ctx)
 	go a.loop(ctx)
+	if update.Newer("0.0.0", a.Version) { // only released builds such as "1.3.2", never a dev build
+		go a.updateLoop(ctx)
+	}
 	a.Log.Info("started", "version", a.Version, "config", a.CfgPath)
 	if a.Options.ShowSettings {
 		go a.OpenSettings()
@@ -478,6 +529,7 @@ func (a *App) syncMenu() {
 	set(m.openCfg, t("tray.openconfig"), "")
 	set(m.openLog, t("tray.openlog"), "")
 	set(m.reload, t("tray.reload"), "")
+	set(m.update, t("tray.update"), "")
 	set(m.quit, t("tray.quit"), "")
 }
 
@@ -520,6 +572,7 @@ func (a *App) buildMenu(ctx context.Context) {
 	m.openCfg = systray.AddMenuItem("Config", "")
 	m.openLog = systray.AddMenuItem("Log", "")
 	m.reload = systray.AddMenuItem("Reload", "")
+	m.update = systray.AddMenuItem("Updates", "")
 	systray.AddSeparator()
 	m.quit = systray.AddMenuItem("Quit", "")
 
@@ -581,6 +634,7 @@ func (a *App) buildMenu(ctx context.Context) {
 	}
 	spawn(m.openCfg.ClickedCh, open(a.CfgPath))
 	spawn(m.openLog.ClickedCh, open(a.LogPath))
+	spawn(m.update.ClickedCh, a.manualUpdateCheck)
 	spawn(m.reload.ClickedCh, func() {
 		a.mu.Lock()
 		a.modTime = time.Time{} // force a re-read

@@ -3,10 +3,15 @@
 package settings
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"syscall"
+	"unsafe"
+
+	"golang.org/x/sys/windows"
 
 	"golang.org/x/sys/windows/registry"
 )
@@ -39,9 +44,12 @@ func edgePath() string {
 
 // Show opens url in a standalone app-style window (no tabs or address bar).
 // It uses Edge with a private profile so it neither joins the user's browser
-// session nor shows first-run prompts; if Edge is missing it falls back to the
-// default browser.
+// session nor shows first-run prompts. If Edge is missing or cannot be started
+// it tries the default browser, first through the shell and then through
+// rundll32. When every way fails the error lists each attempt, so a security
+// product that blocks TaskGlass from starting programs is visible in the log.
 func Show(url, profileDir string) error {
+	var errs []error
 	if edge := edgePath(); edge != "" {
 		cmd := exec.Command(edge,
 			"--app="+url,
@@ -52,15 +60,78 @@ func Show(url, profileDir string) error {
 			"--disable-extensions",
 		)
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
-		if err := cmd.Start(); err == nil {
+		err := cmd.Start()
+		if err == nil {
 			go cmd.Wait()
 			return nil
 		}
+		errs = append(errs, fmt.Errorf("edge: %w", err))
+	}
+	if err := windows.ShellExecute(0, windows.StringToUTF16Ptr("open"), windows.StringToUTF16Ptr(url), nil, nil, windows.SW_SHOWNORMAL); err == nil {
+		return nil
+	} else {
+		errs = append(errs, fmt.Errorf("shell: %w", err))
 	}
 	cmd := exec.Command("rundll32.exe", "url.dll,FileProtocolHandler", url)
 	if err := cmd.Start(); err != nil {
-		return err
+		return errors.Join(append(errs, fmt.Errorf("rundll32: %w", err))...)
 	}
 	go cmd.Wait()
 	return nil
+}
+
+var (
+	user32          = windows.NewLazySystemDLL("user32.dll")
+	kernel32        = windows.NewLazySystemDLL("kernel32.dll")
+	pOpenClipboard  = user32.NewProc("OpenClipboard")
+	pCloseClipboard = user32.NewProc("CloseClipboard")
+	pEmptyClipboard = user32.NewProc("EmptyClipboard")
+	pSetClipboard   = user32.NewProc("SetClipboardData")
+	pMessageBox     = user32.NewProc("MessageBoxW")
+	pGlobalAlloc    = kernel32.NewProc("GlobalAlloc")
+	pGlobalLock     = kernel32.NewProc("GlobalLock")
+	pGlobalUnlock   = kernel32.NewProc("GlobalUnlock")
+	pMoveMemory     = kernel32.NewProc("RtlMoveMemory")
+)
+
+// CopyToClipboard puts text on the clipboard. It works without starting any
+// program, so it still works when something blocks TaskGlass from launching one.
+func CopyToClipboard(text string) bool {
+	u, err := windows.UTF16FromString(text)
+	if err != nil {
+		return false
+	}
+	if r, _, _ := pOpenClipboard.Call(0); r == 0 {
+		return false
+	}
+	defer pCloseClipboard.Call()
+	pEmptyClipboard.Call()
+	size := uintptr(len(u) * 2)
+	h, _, _ := pGlobalAlloc.Call(0x0002, size) // GMEM_MOVEABLE
+	if h == 0 {
+		return false
+	}
+	p, _, _ := pGlobalLock.Call(h)
+	if p == 0 {
+		return false
+	}
+	pMoveMemory.Call(p, uintptr(unsafe.Pointer(&u[0])), size)
+	pGlobalUnlock.Call(h)
+	r, _, _ := pSetClipboard.Call(13, h) // CF_UNICODETEXT
+	return r != 0
+}
+
+// Ask shows a modal Yes/No question and reports whether the user chose Yes.
+func Ask(title, text string) bool {
+	t, _ := windows.UTF16PtrFromString(title)
+	m, _ := windows.UTF16PtrFromString(text)
+	r, _, _ := pMessageBox.Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x4|0x20|0x40000) // MB_YESNO|MB_ICONQUESTION|MB_TOPMOST
+	return r == 6                                                                                            // IDYES
+}
+
+// Notify shows a modal warning box (blocks until it is closed).
+func Notify(title, text string) {
+	t, _ := windows.UTF16PtrFromString(title)
+	m, _ := windows.UTF16PtrFromString(text)
+	pMessageBox.Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x30|0x40000) // MB_ICONWARNING|MB_TOPMOST
 }

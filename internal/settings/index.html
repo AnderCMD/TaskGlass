@@ -129,6 +129,9 @@ footer .sp { flex: 1; }
         <label class="switch"><input type="checkbox" id="autostart"><i></i></label></div>
       <div class="row"><div class="label" data-i18n="general.language"></div>
         <select data-k="language" data-opts="auto,en,es" data-prefix="language."></select></div>
+      <div class="row col"><div class="inline" style="justify-content:space-between"><div><div class="label" data-i18n="general.updates"></div><div class="help" data-i18n="update.help"></div></div>
+        <select data-k="updates" data-opts="notify,auto,off" data-prefix="update.mode."></select></div>
+        <div class="inline"><button class="btn" id="updCheck" data-i18n="update.check"></button><button class="btn primary hidden" id="updInstall" data-i18n="update.install"></button><span class="help" id="updMsg"></span></div></div>
       <div class="row"><div><div class="label" data-i18n="general.theme"></div><div class="help" data-i18n="general.theme.help"></div></div>
         <select data-k="theme" data-opts="auto,light,dark" data-prefix="theme."></select></div>
       <div class="row"><div class="label" data-i18n="general.taskbars"></div>
@@ -168,6 +171,10 @@ footer .sp { flex: 1; }
         <label class="switch"><input type="checkbox" data-k="surfaces.tray_overflow.enabled"><i></i></label></div>
       <div class="row col"><div><div class="label" data-i18n="tray.opacity"></div><div class="help" data-i18n="tray.opacity.help"></div></div>
         <div class="inline"><input type="range" min="0" max="100" data-k="surfaces.tray_overflow.opacity"><span class="num" data-num="surfaces.tray_overflow.opacity"></span></div></div>
+      <div class="row"><div><div class="label" data-i18n="tray.maxRule"></div><div class="help" data-i18n="tray.maxRule.help"></div></div>
+        <label class="switch"><input type="checkbox" data-k="surfaces.tray_overflow.maximized.enabled"><i></i></label></div>
+      <div class="row col"><div><div class="label" data-i18n="tray.maxOpacity"></div></div>
+        <div class="inline"><input type="range" min="0" max="100" data-k="surfaces.tray_overflow.maximized.opacity"><span class="num" data-num="surfaces.tray_overflow.maximized.opacity"></span></div></div>
     </div>
 
     <div class="card panel hidden" data-panel="apps">
@@ -336,14 +343,14 @@ function rgbOf(color, light) {
 const NOISE = "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='120' height='120' filter='url(%23n)'/></svg>\")";
 function currentAppearance() {
   if (!cfg.enabled) return { accent: "normal", color: "auto", opacity: 100, disabled: true };
-  if (scenario === "maximized" && cfg.maximized.enabled) return cfg.maximized;
+  if (scenario === "maximized") return cfg.maximized.enabled ? cfg.maximized : cfg.default;
   if (scenario.startsWith("app:")) { const r = cfg.apps[+scenario.slice(4)]; if (r) return r; }
   return cfg.default;
 }
 function paintPreview() {
   const light = isLight(), ap = currentAppearance(), bar = $("#bar"), fill = $("#barFill"), noise = $("#barNoise"), desk = $("#desk");
   bar.classList.toggle("light", light);
-  desk.classList.toggle("winmax", scenario === "maximized" && cfg.maximized.enabled && cfg.enabled);
+  desk.classList.toggle("winmax", scenario === "maximized" && cfg.enabled);
   let [r, g, b] = rgbOf(ap.color, light), a = ap.opacity / 100;
   let css = "", blur = "", nz = 0;
   switch (ap.accent) {
@@ -366,7 +373,8 @@ function paintPreview() {
   // hidden-icons flyout
   const fly = $("#flyout"), s = cfg.surfaces.tray_overflow, on = cfg.enabled && s.enabled && meta.xamlAvailable !== false;
   fly.classList.toggle("light", light);
-  const fa = on ? s.opacity / 100 : .92, base = light ? "243,243,243" : "36,36,36";
+  const mx = scenario === "maximized" && s.maximized.enabled;
+  const fa = on ? (mx ? s.maximized.opacity : s.opacity) / 100 : .92, base = light ? "243,243,243" : "36,36,36";
   const ff = $(".fill", fly); ff.style.background = `rgba(${base},${fa})`; ff.style.backdropFilter = `blur(${on ? 24 : 40}px) saturate(1.5)`;
   fly.style.borderColor = light ? "rgba(0,0,0,.12)" : "rgba(255,255,255,.12)";
   $("#deskcap").textContent = ap.disabled ? "Windows" : t("accent." + ap.accent);
@@ -375,7 +383,7 @@ function renderScenarios() {
   const box = $("#scenarios"); box.innerHTML = "";
   const add = (id, label) => { const b = document.createElement("button"); b.type = "button"; b.textContent = label; b.setAttribute("aria-pressed", scenario === id); b.onclick = () => { scenario = id; renderScenarios(); paintPreview(); }; box.appendChild(b); };
   add("desktop", t("ui.previewTaskbar"));
-  if (cfg.maximized.enabled) add("maximized", t("ui.previewMax"));
+  if (cfg.maximized.enabled || (cfg.surfaces.tray_overflow.enabled && cfg.surfaces.tray_overflow.maximized.enabled)) add("maximized", t("ui.previewMax"));
   cfg.apps.forEach((r, i) => { if (r.exe) add("app:" + i, t("ui.previewApp", r.exe)); });
   if (!$$("button", box).some(b => b.getAttribute("aria-pressed") === "true")) { scenario = "desktop"; $("button", box).setAttribute("aria-pressed", "true"); }
 }
@@ -423,6 +431,7 @@ function syncAll() {
   $$("[data-num]").forEach(e => e.textContent = getPath(cfg, e.dataset.num));
   $("#autostart").checked = auto;
   $("#maxBlock").classList.toggle("hidden", !cfg.maximized.enabled);
+  $('[data-k="surfaces.tray_overflow.maximized.opacity"]').disabled = !cfg.surfaces.tray_overflow.maximized.enabled;
   $("#xamlMissing").classList.toggle("hidden", meta.xamlAvailable);
   $("#blurNote").classList.toggle("hidden", !(meta.blurViaAcrylic && cfg.default.accent === "blur"));
   ["#defTint", "#maxTint"].forEach(s => syncTint($(s)));
@@ -453,6 +462,18 @@ function bindStatic() {
     cfg.default.accent = P[0]; cfg.default.opacity = P[1]; onChange();
   });
   $("#addApp").onclick = () => { cfg.apps.push({ exe: "", accent: "opaque", color: "auto", opacity: 100 }); renderApps(); onChange(); const ins = $$("#appList input[type=text]"); ins[ins.length - 1]?.focus(); };
+  $("#updCheck").onclick = async () => {
+    $("#updMsg").textContent = t("update.checking");
+    try {
+      const r = await api("/api/update/check", {});
+      $("#updMsg").textContent = r.available ? t("update.availableShort", r.latest) : t("update.uptodate", r.current);
+      $("#updInstall").classList.toggle("hidden", !r.available);
+    } catch (e) { $("#updMsg").textContent = t("update.checkFailed", e.message); }
+  };
+  $("#updInstall").onclick = async () => {
+    $("#updMsg").textContent = t("update.installing");
+    try { await api("/api/update/install", {}); } catch (e) { $("#updMsg").textContent = t("update.failed", e.message); }
+  };
   $("#openCfg").onclick = () => api("/api/open", { what: "config" }).catch(e => toast(e.message, true));
   $("#openLog").onclick = () => api("/api/open", { what: "log" }).catch(e => toast(e.message, true));
   $("#revert").onclick = () => { cfg = JSON.parse(savedCfg); auto = savedAuto; applyI18n(); onChange(); };

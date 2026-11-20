@@ -51,6 +51,21 @@
         },
         "opacity": {
           "$ref": "#/definitions/opacity"
+        },
+        "maximized": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Opacity used instead of `opacity` while a window is maximized or fullscreen on any monitor.",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": false
+            },
+            "opacity": {
+              "$ref": "#/definitions/opacity",
+              "default": 85
+            }
+          }
         }
       }
     },
@@ -86,6 +101,16 @@
       "type": "boolean",
       "default": true,
       "description": "Master switch. When false the stock taskbar is shown."
+    },
+    "updates": {
+      "type": "string",
+      "enum": [
+        "notify",
+        "auto",
+        "off"
+      ],
+      "default": "notify",
+      "description": "What to do about new releases. notify: check once a day and ask before installing. auto: install without asking. off: never contact GitHub."
     },
     "language": {
       "type": "string",
