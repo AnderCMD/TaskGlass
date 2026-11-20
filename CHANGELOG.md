@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.3.1] - 2026-11-20
 
 ### Changed
 - **The settings window is the web-style one again** (the 1.2.x window, shown in an Edge app window; the native Win32 window from 1.3.0 is removed). It keeps the 1.3.0 improvements: Blur works on Windows 11, and the preview shows how Blur really looks there.
