@@ -464,6 +464,9 @@ func Parse(data []byte) (Config, error) {
 	if err := c.Validate(); err != nil {
 		return Config{}, fmt.Errorf("invalid config: %w", err)
 	}
+	if c.Apps == nil {
+		c.Apps = []AppRule{} // "apps": null (written by 1.2.0) means no rules
+	}
 	return c, nil
 }
 
@@ -488,6 +491,9 @@ func Load(path string) (Config, error) {
 func Save(path string, c Config) error {
 	if err := c.Validate(); err != nil {
 		return err
+	}
+	if c.Apps == nil {
+		c.Apps = []AppRule{} // never write "apps": null
 	}
 	c.LegacyStartMenu, c.Surfaces.LegacySurfaceStartMenu, c.Surfaces.LegacyExplorer = nil, nil, nil // dropped for good on the first save
 	data, err := json.MarshalIndent(c, "", "  ")

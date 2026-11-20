@@ -272,3 +272,22 @@ func TestOldStartMenuRuleStillLoads(t *testing.T) {
 		t.Fatal("maximized must be off by default")
 	}
 }
+
+func TestNullAppsBecomesEmptyAndIsNeverWrittenAsNull(t *testing.T) {
+	c, err := Parse([]byte(`{"version":1,"apps":null}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.Apps == nil {
+		t.Fatal("apps: null must load as an empty list")
+	}
+	c.Apps = nil
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(path)
+	if strings.Contains(string(data), `"apps": null`) {
+		t.Fatalf("saved null apps:\n%s", data)
+	}
+}
