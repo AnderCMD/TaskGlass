@@ -39,6 +39,8 @@ powershell -File scripts/build-tap.ps1   # builds dist/taskglass_tap.dll
 
 ## Usage
 
+Left-click the tray icon (or run `taskglass --settings`) to open the **settings window**: every option, in English or Spanish, with a live preview of your taskbar and the hidden-icons flyout.
+
 Right-click the tray icon to enable or disable TaskGlass, pick a style or a theme, toggle the rules and the tray flyout, start with Windows, or open the config and the log.
 
 A minimal config that makes the bar clear, opaque when something is maximized, and a tinted blur in your editor:

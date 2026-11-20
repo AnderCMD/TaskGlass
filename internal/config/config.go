@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/AnderCMD/TaskGlass/internal/i18n"
 )
 
 // CurrentVersion is the schema version written to new config files.
@@ -213,6 +215,8 @@ type Config struct {
 	Version int    `json:"version"`
 	// Enabled is the master switch. When false the stock taskbar is shown.
 	Enabled bool `json:"enabled"`
+	// Language of the tray menu and settings window: auto (follow Windows), en or es.
+	Language i18n.Lang `json:"language"`
 	// Theme drives "auto" colours and the tray icon.
 	Theme Theme `json:"theme"`
 	// Taskbars selects which taskbars are styled: all monitors or the primary.
@@ -258,6 +262,7 @@ func Default() Config {
 		Schema:   SchemaURL,
 		Version:  CurrentVersion,
 		Enabled:  true,
+		Language: i18n.Auto,
 		Theme:    ThemeAuto,
 		Taskbars: TaskbarsAll,
 		Default:  Appearance{Accent: AccentClear, Color: ColorAuto, Opacity: 0},
@@ -286,6 +291,9 @@ func Default() Config {
 func (c Config) Validate() error {
 	if c.Version != CurrentVersion {
 		return fmt.Errorf("unsupported config version %d (want %d)", c.Version, CurrentVersion)
+	}
+	if !c.Language.Valid() {
+		return fmt.Errorf("language %q must be auto, en or es", c.Language)
 	}
 	if !c.Theme.Valid() {
 		return fmt.Errorf("theme %q must be auto, light or dark", c.Theme)

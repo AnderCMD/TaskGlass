@@ -41,6 +41,7 @@ Changes made from the tray menu are saved to this same file.
 | Key | Values | Meaning |
 |-----|--------|---------|
 | `enabled` | bool | Master switch. `false` shows the stock taskbar. |
+| `language` | `auto`, `en`, `es` | Language of the tray menu and settings window. `auto` follows the Windows display language. |
 | `theme` | `auto`, `light`, `dark` | Which colour mode drives `"auto"` colours, the tray icon and the tray menu (the menu follows the Windows *apps* mode when `auto`). `auto` follows the Windows *system* theme (the one the taskbar uses). |
 | `taskbars` | `all`, `primary` | Style every monitor's taskbar or only the primary one. |
 | `default` | appearance | Used when no other rule matches. |

@@ -22,6 +22,8 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/autostart"
 	"github.com/AnderCMD/TaskGlass/internal/config"
 	"github.com/AnderCMD/TaskGlass/internal/events"
+	"github.com/AnderCMD/TaskGlass/internal/i18n"
+	"github.com/AnderCMD/TaskGlass/internal/settings"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
 	"github.com/AnderCMD/TaskGlass/internal/theme"
 	"github.com/AnderCMD/TaskGlass/internal/xaml"
@@ -34,6 +36,8 @@ type Options struct {
 	LogPath string
 	Version string
 	Config  config.Config
+	// ShowSettings opens the settings window right after start-up.
+	ShowSettings bool
 }
 
 // App is the running TaskGlass instance.
@@ -52,6 +56,7 @@ type App struct {
 	ev          *events.Watcher
 	kick        chan struct{} // asks the loop for an immediate update
 
+	srv      *settings.Server
 	menu     menuItems
 	cancel   context.CancelFunc
 	done     chan struct{}
@@ -60,10 +65,12 @@ type App struct {
 }
 
 type menuItems struct {
-	enabled, hotkey, maximized, xamlFix, autostart *systray.MenuItem
-	surfTray                                       *systray.MenuItem
-	accents                                        map[config.Accent]*systray.MenuItem
-	themes                                         map[config.Theme]*systray.MenuItem
+	title, enabled, hotkey, maximized, xamlFix, autostart *systray.MenuItem
+	settings, styleMenu, themeMenu, langMenu              *systray.MenuItem
+	surfTray, openCfg, openLog, reload, quit              *systray.MenuItem
+	accents                                               map[config.Accent]*systray.MenuItem
+	themes                                                map[config.Theme]*systray.MenuItem
+	langs                                                 map[i18n.Lang]*systray.MenuItem
 }
 
 // New creates an App with an already-loaded configuration.
@@ -74,6 +81,10 @@ func New(o Options) *App {
 		a.modTime = st.ModTime()
 	}
 	a.systemLight.Store(theme.SystemIsLight())
+	a.srv = settings.New(host{a})
+	if autostart.Repair(exe) {
+		o.Log.Info("autostart entry repaired")
+	}
 	if p, ok := xaml.Available(exe); ok {
 		a.xaml = xaml.New(o.Log, p)
 	} else {
@@ -111,14 +122,21 @@ func (a *App) wake() {
 
 // update applies fn to a copy of the config, saves it and publishes it.
 func (a *App) update(fn func(*config.Config)) {
+	if err := a.apply(fn); err != nil {
+		a.Log.Error("save config", "err", err)
+	}
+}
+
+// apply is update that reports why a change was rejected (invalid values or a
+// file that cannot be written).
+func (a *App) apply(fn func(*config.Config)) error {
 	a.mu.Lock()
 	next := a.cfg
 	next.Apps = append([]config.AppRule(nil), a.cfg.Apps...)
 	fn(&next)
 	if err := config.Save(a.CfgPath, next); err != nil {
 		a.mu.Unlock()
-		a.Log.Error("save config", "err", err)
-		return
+		return err
 	}
 	a.cfg = next
 	if st, err := os.Stat(a.CfgPath); err == nil {
@@ -128,7 +146,58 @@ func (a *App) update(fn func(*config.Config)) {
 	a.applySideEffects(next)
 	a.syncMenu()
 	a.wake()
+	return nil
 }
+
+// lang is the language the UI currently uses.
+func (a *App) lang() i18n.Lang { return i18n.Resolve(a.snapshot().Language, i18n.SystemLocale()) }
+
+// OpenSettings shows the settings window (starting its local server on first use).
+func (a *App) OpenSettings() {
+	if a.srv == nil {
+		return
+	}
+	url, err := a.srv.URL()
+	if err != nil {
+		a.Log.Error("settings server", "err", err)
+		return
+	}
+	profile := filepath.Join(os.TempDir(), "TaskGlass-ui")
+	if dir, err := os.UserCacheDir(); err == nil {
+		profile = filepath.Join(dir, "TaskGlass", "ui-profile")
+	}
+	if err := settings.Show(url, profile); err != nil {
+		a.Log.Error("open settings window", "err", err)
+	}
+}
+
+// host adapts App to settings.Host.
+type host struct{ a *App }
+
+func (h host) Config() config.Config { return h.a.snapshot() }
+func (h host) Apply(c config.Config) error {
+	next := c
+	next.Apps = append([]config.AppRule(nil), c.Apps...)
+	return h.a.apply(func(cur *config.Config) { *cur = next })
+}
+func (h host) AutostartEnabled() bool { return autostart.Enabled(h.a.exe) }
+func (h host) SetAutostart(on bool) error {
+	if err := autostart.Set(h.a.exe, on); err != nil {
+		return err
+	}
+	h.a.syncMenu()
+	return nil
+}
+func (h host) OpenFile(which string) error {
+	path := h.a.CfgPath
+	if which == "log" {
+		path = h.a.LogPath
+	}
+	return exec.Command("notepad.exe", path).Start()
+}
+func (h host) Version() string     { return h.a.Version }
+func (h host) ConfigPath() string  { return h.a.CfgPath }
+func (h host) XamlAvailable() bool { return h.a.xaml != nil }
 
 // reload re-reads the config file if it changed on disk.
 func (a *App) reload() {
@@ -315,6 +384,9 @@ func (a *App) onReady() {
 	a.buildMenu(ctx)
 	go a.loop(ctx)
 	a.Log.Info("started", "version", a.Version, "config", a.CfgPath)
+	if a.Options.ShowSettings {
+		go a.OpenSettings()
+	}
 }
 
 func (a *App) onExit() { a.shutdown() }
@@ -325,6 +397,9 @@ func (a *App) onExit() { a.shutdown() }
 // process must not exit before the taskbar has been restored.
 func (a *App) shutdown() {
 	a.stopOnce.Do(func() {
+		if a.srv != nil {
+			a.srv.Close()
+		}
 		if a.cancel != nil {
 			a.cancel()
 			select {
@@ -342,20 +417,6 @@ func (a *App) shutdown() {
 
 // ---- tray menu ---------------------------------------------------------
 
-var accentLabels = map[config.Accent]string{
-	config.AccentClear:   "Clear",
-	config.AccentBlur:    "Blur",
-	config.AccentAcrylic: "Acrylic",
-	config.AccentOpaque:  "Opaque",
-	config.AccentNormal:  "Normal (Windows default)",
-}
-
-var themeLabels = map[config.Theme]string{
-	config.ThemeAuto:  "Follow Windows",
-	config.ThemeLight: "Light",
-	config.ThemeDark:  "Dark",
-}
-
 func check(it *systray.MenuItem, on bool) {
 	if on {
 		it.Check()
@@ -364,66 +425,105 @@ func check(it *systray.MenuItem, on bool) {
 	}
 }
 
+// syncMenu refreshes check marks and (re)translates every menu entry, so a
+// language change takes effect immediately.
 func (a *App) syncMenu() {
 	m := a.menu
 	if m.enabled == nil {
 		return
 	}
 	c := a.snapshot()
+	l := a.lang()
+	t := func(k string) string { return i18n.T(l, k) }
+	set := func(it *systray.MenuItem, title, tip string) {
+		it.SetTitle(title)
+		if tip != "" {
+			it.SetTooltip(tip)
+		}
+	}
 	check(m.enabled, c.Enabled)
 	check(m.maximized, c.Maximized.Enabled)
 	check(m.xamlFix, c.XamlFix)
 	check(m.surfTray, c.Surfaces.TrayOverflow.Enabled)
+	check(m.hotkey, c.HotkeyEnabled)
+	check(m.autostart, autostart.Enabled(a.exe))
 	for k, it := range m.accents {
 		check(it, k == c.Default.Accent)
+		it.SetTitle(t("accent." + string(k)))
 	}
 	for k, it := range m.themes {
 		check(it, k == c.Theme)
+		it.SetTitle(t("theme." + string(k)))
 	}
-	check(m.hotkey, c.HotkeyEnabled)
-	title := "Enabled"
+	for k, it := range m.langs {
+		check(it, k == c.Language)
+		it.SetTitle(t("language." + string(k)))
+	}
+	title := t("tray.enabled")
 	if c.HotkeyEnabled && c.Hotkey != "" {
 		title += "\t" + c.Hotkey
 	}
-	m.enabled.SetTitle(title)
-	m.hotkey.SetTitle("Global hotkey (" + c.Hotkey + ")")
+	set(m.enabled, title, t("tray.enabled.tip"))
+	set(m.settings, t("tray.settings"), t("tray.settings.tip"))
+	set(m.styleMenu, t("tray.style"), "")
+	set(m.themeMenu, t("tray.theme"), "")
+	set(m.langMenu, t("tray.language"), "")
+	set(m.maximized, t("tray.maximized"), "")
+	set(m.hotkey, fmt.Sprintf(t("tray.hotkey"), c.Hotkey), t("tray.hotkey.tip"))
+	set(m.surfTray, t("tray.flyout"), t("tray.flyout.tip"))
+	set(m.xamlFix, t("tray.xaml"), t("tray.xaml.tip"))
+	set(m.autostart, t("tray.autostart"), "")
+	set(m.openCfg, t("tray.openconfig"), "")
+	set(m.openLog, t("tray.openlog"), "")
+	set(m.reload, t("tray.reload"), "")
+	set(m.quit, t("tray.quit"), "")
 }
 
 func (a *App) buildMenu(ctx context.Context) {
 	c := a.snapshot()
-	title := systray.AddMenuItem("TaskGlass "+a.Version, "")
-	title.Disable()
-	systray.AddSeparator()
-
 	m := &a.menu
-	m.enabled = systray.AddMenuItemCheckbox("Enabled", "Turn the effect on or off", c.Enabled)
+	m.title = systray.AddMenuItem("TaskGlass "+a.Version, "")
+	m.title.Disable()
 	systray.AddSeparator()
 
-	styleMenu := systray.AddMenuItem("Style", "Taskbar style")
+	m.settings = systray.AddMenuItem("Settings", "")
+	m.enabled = systray.AddMenuItemCheckbox("Enabled", "", c.Enabled)
+	systray.AddSeparator()
+
+	m.styleMenu = systray.AddMenuItem("Style", "")
 	m.accents = map[config.Accent]*systray.MenuItem{}
 	for _, ac := range config.Accents {
-		m.accents[ac] = styleMenu.AddSubMenuItemCheckbox(accentLabels[ac], "", ac == c.Default.Accent)
+		m.accents[ac] = m.styleMenu.AddSubMenuItemCheckbox(string(ac), "", ac == c.Default.Accent)
 	}
-	themeMenu := systray.AddMenuItem("Theme", "Drives automatic colours and the tray icon")
+	m.themeMenu = systray.AddMenuItem("Theme", "")
 	m.themes = map[config.Theme]*systray.MenuItem{}
 	for _, th := range config.Themes {
-		m.themes[th] = themeMenu.AddSubMenuItemCheckbox(themeLabels[th], "", th == c.Theme)
+		m.themes[th] = m.themeMenu.AddSubMenuItemCheckbox(string(th), "", th == c.Theme)
+	}
+	m.langMenu = systray.AddMenuItem("Language", "")
+	m.langs = map[i18n.Lang]*systray.MenuItem{}
+	for _, lg := range []i18n.Lang{i18n.Auto, i18n.English, i18n.Spanish} {
+		m.langs[lg] = m.langMenu.AddSubMenuItemCheckbox(string(lg), "", lg == c.Language)
 	}
 
-	m.maximized = systray.AddMenuItemCheckbox("Opaque when a window is maximized", "", c.Maximized.Enabled)
-	m.hotkey = systray.AddMenuItemCheckbox("Global hotkey ("+c.Hotkey+")", "Toggle TaskGlass from anywhere; set the keys in the config file", c.HotkeyEnabled)
-	m.surfTray = systray.AddMenuItemCheckbox("Translucent tray flyout", "Make the hidden-icons flyout (the ^ button) translucent; opacity is set in the config file", c.Surfaces.TrayOverflow.Enabled)
-	m.xamlFix = systray.AddMenuItemCheckbox("Fully transparent (Windows 11)", "Remove the taskbar's own XAML fill", c.XamlFix)
+	m.maximized = systray.AddMenuItemCheckbox("Maximized", "", c.Maximized.Enabled)
+	m.hotkey = systray.AddMenuItemCheckbox("Hotkey", "", c.HotkeyEnabled)
+	m.surfTray = systray.AddMenuItemCheckbox("Flyout", "", c.Surfaces.TrayOverflow.Enabled)
+	m.xamlFix = systray.AddMenuItemCheckbox("Transparent", "", c.XamlFix)
 	if a.xaml == nil {
 		m.xamlFix.Disable()
 	}
 	systray.AddSeparator()
-	m.autostart = systray.AddMenuItemCheckbox("Start with Windows", "", autostart.Enabled(a.exe))
-	openCfg := systray.AddMenuItem("Open config file", "")
-	openLog := systray.AddMenuItem("Open log", "")
-	reload := systray.AddMenuItem("Reload config", "")
+	m.autostart = systray.AddMenuItemCheckbox("Autostart", "", autostart.Enabled(a.exe))
+	m.openCfg = systray.AddMenuItem("Config", "")
+	m.openLog = systray.AddMenuItem("Log", "")
+	m.reload = systray.AddMenuItem("Reload", "")
 	systray.AddSeparator()
-	quit := systray.AddMenuItem("Quit TaskGlass", "")
+	m.quit = systray.AddMenuItem("Quit", "")
+
+	// A left click on the tray icon opens the settings window; the menu stays
+	// on the right click.
+	systray.SetOnTapped(a.OpenSettings)
 
 	spawn := func(ch <-chan struct{}, fn func()) {
 		go func() {
@@ -443,6 +543,7 @@ func (a *App) buildMenu(ctx context.Context) {
 			a.update(func(c *config.Config) { set(c, on) })
 		}
 	}
+	spawn(m.settings.ClickedCh, a.OpenSettings)
 	spawn(m.enabled.ClickedCh, flip(m.enabled, func(c *config.Config, on bool) { c.Enabled = on }))
 	spawn(m.hotkey.ClickedCh, flip(m.hotkey, func(c *config.Config, on bool) { c.HotkeyEnabled = on }))
 	spawn(m.maximized.ClickedCh, flip(m.maximized, func(c *config.Config, on bool) { c.Maximized.Enabled = on }))
@@ -455,6 +556,10 @@ func (a *App) buildMenu(ctx context.Context) {
 	for th, it := range m.themes {
 		th := th
 		spawn(it.ClickedCh, func() { a.update(func(c *config.Config) { c.Theme = th }) })
+	}
+	for lg, it := range m.langs {
+		lg := lg
+		spawn(it.ClickedCh, func() { a.update(func(c *config.Config) { c.Language = lg }) })
 	}
 	spawn(m.autostart.ClickedCh, func() {
 		on := !m.autostart.Checked()
@@ -472,9 +577,9 @@ func (a *App) buildMenu(ctx context.Context) {
 			}
 		}
 	}
-	spawn(openCfg.ClickedCh, open(a.CfgPath))
-	spawn(openLog.ClickedCh, open(a.LogPath))
-	spawn(reload.ClickedCh, func() {
+	spawn(m.openCfg.ClickedCh, open(a.CfgPath))
+	spawn(m.openLog.ClickedCh, open(a.LogPath))
+	spawn(m.reload.ClickedCh, func() {
 		a.mu.Lock()
 		a.modTime = time.Time{} // force a re-read
 		a.mu.Unlock()
@@ -483,7 +588,7 @@ func (a *App) buildMenu(ctx context.Context) {
 	go func() {
 		select {
 		case <-ctx.Done():
-		case <-quit.ClickedCh:
+		case <-m.quit.ClickedCh:
 			a.Quit()
 		}
 	}()

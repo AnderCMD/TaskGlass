@@ -87,6 +87,16 @@
       "default": true,
       "description": "Master switch. When false the stock taskbar is shown."
     },
+    "language": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "en",
+        "es"
+      ],
+      "default": "auto",
+      "description": "Language of the tray menu and settings window. auto follows the Windows display language."
+    },
     "theme": {
       "type": "string",
       "enum": [
