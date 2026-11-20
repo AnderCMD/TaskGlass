@@ -28,6 +28,8 @@ var (
 	procIsWindowVisible = user32.NewProc("IsWindowVisible")
 	procIsIconic        = user32.NewProc("IsIconic")
 	procIsZoomed        = user32.NewProc("IsZoomed")
+	procGetWindowRect   = user32.NewProc("GetWindowRect")
+	procGetMonitorInfo  = user32.NewProc("GetMonitorInfoW")
 	procIsWindow        = user32.NewProc("IsWindow")
 	procGetWindowLongW  = user32.NewProc("GetWindowLongW")
 	procMonitorFromWnd  = user32.NewProc("MonitorFromWindow")
@@ -207,8 +209,35 @@ var shellClasses = map[string]bool{
 	"Shell_SecondaryTrayWnd": true,
 }
 
+type rect struct{ Left, Top, Right, Bottom int32 }
+
+type monitorInfo struct {
+	Size    uint32
+	Monitor rect
+	Work    rect
+	Flags   uint32
+}
+
+// coversMonitor reports whether hwnd fills its whole monitor (a borderless
+// fullscreen game or video), which IsZoomed does not report.
+func coversMonitor(hwnd HWND) bool {
+	m := Monitor(hwnd)
+	if m == 0 {
+		return false
+	}
+	mi := monitorInfo{Size: uint32(unsafe.Sizeof(monitorInfo{}))}
+	if r, _, _ := procGetMonitorInfo.Call(m, uintptr(unsafe.Pointer(&mi))); r == 0 {
+		return false
+	}
+	var wr rect
+	if r, _, _ := procGetWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&wr))); r == 0 {
+		return false
+	}
+	return wr.Left <= mi.Monitor.Left && wr.Top <= mi.Monitor.Top && wr.Right >= mi.Monitor.Right && wr.Bottom >= mi.Monitor.Bottom
+}
+
 // MaximizedMonitors returns the set of monitors that currently show a
-// maximized, visible, non-minimized, non-cloaked application window.
+// maximized or fullscreen, visible, non-minimized, non-cloaked application window.
 func MaximizedMonitors() map[uintptr]bool {
 	out := map[uintptr]bool{}
 	enumTopLevel(func(h HWND) bool {
@@ -218,7 +247,7 @@ func MaximizedMonitors() map[uintptr]bool {
 		if v, _, _ := procIsIconic.Call(h); v != 0 {
 			return true
 		}
-		if v, _, _ := procIsZoomed.Call(h); v == 0 {
+		if v, _, _ := procIsZoomed.Call(h); v == 0 && !coversMonitor(h) {
 			return true
 		}
 		ex, _, _ := procGetWindowLongW.Call(h, uintptr(gwlExStyle&0xFFFFFFFF))

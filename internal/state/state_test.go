@@ -85,3 +85,18 @@ func TestNeedsWindowScan(t *testing.T) {
 		t.Fatal("disabled config needs no scan")
 	}
 }
+
+func TestFlyoutRuleNeedsWindowScan(t *testing.T) {
+	c := config.Default()
+	if m, _ := NeedsWindowScan(c); m {
+		t.Fatal("default config must not scan windows")
+	}
+	c.Surfaces.TrayOverflow.Maximized.Enabled = true
+	if m, _ := NeedsWindowScan(c); !m {
+		t.Fatal("the flyout maximized rule needs the maximized scan")
+	}
+	c.Surfaces.TrayOverflow.Enabled = false
+	if m, _ := NeedsWindowScan(c); m {
+		t.Fatal("a disabled flyout needs no scan")
+	}
+}

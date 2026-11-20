@@ -30,6 +30,9 @@ type applied struct {
 type Manager struct {
 	log  *slog.Logger
 	seen map[winapi.HWND]applied
+	// anyMaximized is whether any monitor had a maximized or fullscreen window
+	// at the last Tick that needed to know.
+	anyMaximized bool
 }
 
 // New creates a Manager.
@@ -57,6 +60,9 @@ func (m *Manager) Tick(c config.Config, light bool) (styled bool) {
 	var maxed map[uintptr]bool
 	if needMax {
 		maxed = winapi.MaximizedMonitors()
+		m.anyMaximized = len(maxed) > 0
+	} else {
+		m.anyMaximized = false
 	}
 	var fgExe string
 	var fgMon uintptr
@@ -105,6 +111,10 @@ func (m *Manager) Tick(c config.Config, light bool) (styled bool) {
 	}
 	return styled
 }
+
+// AnyMaximized reports whether a window was maximized or fullscreen on any
+// monitor at the last Tick. Call it from the same goroutine as Tick.
+func (m *Manager) AnyMaximized() bool { return m.anyMaximized }
 
 // Restore puts every taskbar back to the stock Windows look.
 func (m *Manager) Restore() {

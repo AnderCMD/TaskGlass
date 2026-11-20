@@ -4,8 +4,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/); versioning foll
 
 ## [Unreleased]
 
+### Added
+- **Automatic updates.** New `updates` setting (`notify` by default, `auto`, `off`), a **Check for updates…** tray item and controls in the settings window. TaskGlass checks the latest GitHub release once a day (the only network connection it makes), downloads the installer only from GitHub hosts, verifies its SHA-256 against the release's `SHA256SUMS.txt` and discards it on a mismatch, then runs it silently; the installer closes TaskGlass, updates it and starts the new version. In `notify` mode it asks first, once per version. If security software stops the installer from starting, the verified file is kept and its path is copied to the clipboard. Development builds never update. Details in `docs/configuration.md#updates`.
+- **Hidden-icons flyout while a window is maximized or fullscreen.** `surfaces.tray_overflow.maximized` (`{ "enabled": false, "opacity": 85 }`) gives the flyout a second opacity that applies while any monitor has a maximized or fullscreen window, with controls and a preview scenario in both settings windows. Fullscreen windows that are not "maximized" (borderless games and videos) are now detected too, which also makes the taskbar's maximized rule apply to them.
+- **Native settings window as a fallback.** If the web settings window cannot be opened (browser blocked, local port unavailable) TaskGlass now opens the native Win32 window from 1.3.0, which needs neither a browser nor a port, with the same options.
+
 ### Fixed
-- **The settings window now always gives you a way in.** When security software stops TaskGlass from starting programs (`Access is denied` for Edge or `rundll32`) or from opening its local page, the window used to just not appear and the only trace was in the log. TaskGlass now tries Edge, then the default browser through the shell, then `rundll32`; logs every failed attempt; and if all fail it copies the settings address to the clipboard and shows a message explaining what is blocking it and how to fix it.
+- **The settings window now always gives you a way in.** When security software stops TaskGlass from starting programs (`Access is denied` for Edge or `rundll32`) the window used to just not appear. TaskGlass now tries Edge, then the default browser through the shell, then `rundll32`; logs every failed attempt; and falls back to the native window. If even that fails it copies the settings address to the clipboard and shows a message explaining the cause and the fix.
 
 ## [1.3.1] - 2026-11-20
 

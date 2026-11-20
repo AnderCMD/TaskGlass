@@ -24,6 +24,7 @@ import (
 	"github.com/AnderCMD/TaskGlass/assets"
 	"github.com/AnderCMD/TaskGlass/internal/config"
 	"github.com/AnderCMD/TaskGlass/internal/i18n"
+	"github.com/AnderCMD/TaskGlass/internal/update"
 )
 
 //go:embed index.html
@@ -42,6 +43,9 @@ type Host interface {
 	XamlAvailable() bool
 	// BlurNeedsAcrylic reports that Blur is drawn with the acrylic backdrop (Windows 11).
 	BlurNeedsAcrylic() bool
+	// CheckUpdate looks for a newer release; InstallUpdate installs the one found.
+	CheckUpdate() (update.Info, error)
+	InstallUpdate() error
 }
 
 // Server is the loopback HTTP server behind the settings window.
@@ -97,6 +101,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /api/defaults", s.guard(s.defaults))
 	mux.HandleFunc("POST /api/autostart", s.guard(s.autostart))
 	mux.HandleFunc("POST /api/open", s.guard(s.open))
+	mux.HandleFunc("POST /api/update/check", s.guard(s.updateCheck))
+	mux.HandleFunc("POST /api/update/install", s.guard(s.updateInstall))
 	return mux
 }
 
@@ -228,6 +234,23 @@ func (s *Server) open(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.host.OpenFile(req.What); err != nil {
+		writeErr(w, http.StatusInternalServerError, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+func (s *Server) updateCheck(w http.ResponseWriter, _ *http.Request) {
+	info, err := s.host.CheckUpdate()
+	if err != nil {
+		writeErr(w, http.StatusBadGateway, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, info)
+}
+
+func (s *Server) updateInstall(w http.ResponseWriter, _ *http.Request) {
+	if err := s.host.InstallUpdate(); err != nil {
 		writeErr(w, http.StatusInternalServerError, err)
 		return
 	}

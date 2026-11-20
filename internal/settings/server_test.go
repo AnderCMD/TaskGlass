@@ -8,11 +8,13 @@ import (
 	"testing"
 
 	"github.com/AnderCMD/TaskGlass/internal/config"
+	"github.com/AnderCMD/TaskGlass/internal/update"
 )
 
 type fakeHost struct {
-	cfg  config.Config
-	auto bool
+	cfg       config.Config
+	auto      bool
+	installed bool
 }
 
 func (f *fakeHost) Config() config.Config { return f.cfg }
@@ -27,6 +29,10 @@ func (f *fakeHost) Version() string            { return "test" }
 func (f *fakeHost) ConfigPath() string         { return "cfg.json" }
 func (f *fakeHost) XamlAvailable() bool        { return true }
 func (f *fakeHost) BlurNeedsAcrylic() bool     { return true }
+func (f *fakeHost) CheckUpdate() (update.Info, error) {
+	return update.Info{Available: true, Current: "1.0.0", Latest: "1.1.0"}, nil
+}
+func (f *fakeHost) InstallUpdate() error { f.installed = true; return nil }
 
 func do(h http.Handler, method, path, host, token, body string) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(method, path, strings.NewReader(body))
@@ -115,5 +121,24 @@ func TestFaviconIsServedWithoutToken(t *testing.T) {
 	w := do(s.Handler(), "GET", "/favicon.ico", "127.0.0.1:1", "", "")
 	if w.Code != 200 || w.Header().Get("Content-Type") != "image/x-icon" || w.Body.Len() < 100 {
 		t.Fatalf("favicon: %d %s %d bytes", w.Code, w.Header().Get("Content-Type"), w.Body.Len())
+	}
+}
+
+func TestUpdateEndpoints(t *testing.T) {
+	f := &fakeHost{cfg: config.Default()}
+	s := New(f)
+	h := s.Handler()
+	if w := do(h, "POST", "/api/update/check", "127.0.0.1:1", "", "{}"); w.Code != 403 {
+		t.Errorf("update check without token: %d", w.Code)
+	}
+	w := do(h, "POST", "/api/update/check", "127.0.0.1:1", s.token, "{}")
+	if w.Code != 200 || !strings.Contains(w.Body.String(), `"latest":"1.1.0"`) {
+		t.Fatalf("check: %d %s", w.Code, w.Body)
+	}
+	if w := do(h, "POST", "/api/update/install", "evil.example.com", s.token, "{}"); w.Code != 403 || f.installed {
+		t.Errorf("install from a foreign host must be refused (code %d)", w.Code)
+	}
+	if w := do(h, "POST", "/api/update/install", "127.0.0.1:1", s.token, "{}"); w.Code != 200 || !f.installed {
+		t.Errorf("install: %d", w.Code)
 	}
 }

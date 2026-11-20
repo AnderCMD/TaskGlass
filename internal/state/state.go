@@ -49,5 +49,6 @@ func NeedsWindowScan(c config.Config) (maximized, foreground bool) {
 	if !c.Enabled {
 		return false, false
 	}
-	return c.Maximized.Enabled, len(c.Apps) > 0
+	flyout := c.Surfaces.TrayOverflow.Enabled && c.Surfaces.TrayOverflow.Maximized.Enabled
+	return c.Maximized.Enabled || flyout, len(c.Apps) > 0
 }

@@ -121,6 +121,14 @@ func CopyToClipboard(text string) bool {
 	return r != 0
 }
 
+// Ask shows a modal Yes/No question and reports whether the user chose Yes.
+func Ask(title, text string) bool {
+	t, _ := windows.UTF16PtrFromString(title)
+	m, _ := windows.UTF16PtrFromString(text)
+	r, _, _ := pMessageBox.Call(0, uintptr(unsafe.Pointer(m)), uintptr(unsafe.Pointer(t)), 0x4|0x20|0x40000) // MB_YESNO|MB_ICONQUESTION|MB_TOPMOST
+	return r == 6                                                                                            // IDYES
+}
+
 // Notify shows a modal warning box (blocks until it is closed).
 func Notify(title, text string) {
 	t, _ := windows.UTF16PtrFromString(title)

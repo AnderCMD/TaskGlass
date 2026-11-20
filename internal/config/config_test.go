@@ -291,3 +291,27 @@ func TestNullAppsBecomesEmptyAndIsNeverWrittenAsNull(t *testing.T) {
 		t.Fatalf("saved null apps:\n%s", data)
 	}
 }
+
+func TestFlyoutEffectiveOpacityAndUpdateMode(t *testing.T) {
+	s := Default().Surfaces.TrayOverflow
+	if s.Effective(true) != s.Opacity {
+		t.Error("rule off: maximized must not change the opacity")
+	}
+	s.Maximized = SurfaceMaximized{Enabled: true, Opacity: 70}
+	if s.Effective(false) != s.Opacity || s.Effective(true) != 70 {
+		t.Errorf("rule on: got %d / %d", s.Effective(false), s.Effective(true))
+	}
+	c := Default()
+	if c.Updates != UpdatesNotify {
+		t.Errorf("default updates = %q", c.Updates)
+	}
+	c.Updates = "sometimes"
+	if err := c.Validate(); err == nil {
+		t.Error("an unknown update mode must be rejected")
+	}
+	c = Default()
+	c.Surfaces.TrayOverflow.Maximized.Opacity = 120
+	if err := c.Validate(); err == nil {
+		t.Error("an out-of-range maximized opacity must be rejected")
+	}
+}
