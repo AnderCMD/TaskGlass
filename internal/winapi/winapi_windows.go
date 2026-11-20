@@ -266,3 +266,8 @@ func Foreground() (exe string, monitor uintptr) {
 	procGetWindowPID.Call(h, uintptr(unsafe.Pointer(&pid)))
 	return processExe(pid), Monitor(h)
 }
+
+// BlurNeedsAcrylic reports whether the classic blur-behind accent is unusable.
+// Windows 11 (build 22000 and later) draws it as solid black, so "blur" has to
+// be produced with the acrylic backdrop there.
+func BlurNeedsAcrylic() bool { return windows.RtlGetVersion().BuildNumber >= 22000 }

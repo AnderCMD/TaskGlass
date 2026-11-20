@@ -127,6 +127,7 @@ var en = map[string]string{
 	"ui.tab.appearance":   "Appearance",
 	"ui.tab.tray":         "Hidden icons",
 	"ui.tab.apps":         "Per app",
+	"ui.tab.maximized":    "Maximized",
 	"ui.tab.advanced":     "Advanced",
 	"ui.tab.about":        "About",
 
@@ -196,7 +197,14 @@ var en = map[string]string{
 	"about.license": "Licensed under the Apache License 2.0.",
 	"about.site":    "Project page",
 
-	"err.invalid": "Invalid settings: %s",
+	"err.invalid":        "Invalid settings: %s",
+	"appear.pickColor":   "Choose…",
+	"appear.blurNote":    "Windows 11 draws the classic blur as solid black, so Blur uses the acrylic backdrop; its strength lightens or darkens the glass.",
+	"ui.closeUnsaved":    "You have unsaved changes. Save them before closing?",
+	"ui.scenario":        "Show:",
+	"apps.pick":          "Select a rule on the left, or add an application.",
+	"ui.hotkeyInvalid":   "Invalid shortcut",
+	"ui.previewDisabled": "TaskGlass is off: stock Windows taskbar",
 }
 
 var es = map[string]string{
@@ -252,6 +260,7 @@ var es = map[string]string{
 	"ui.tab.appearance":   "Apariencia",
 	"ui.tab.tray":         "Iconos ocultos",
 	"ui.tab.apps":         "Por aplicación",
+	"ui.tab.maximized":    "Maximizada",
 	"ui.tab.advanced":     "Avanzado",
 	"ui.tab.about":        "Acerca de",
 
@@ -321,5 +330,12 @@ var es = map[string]string{
 	"about.license": "Licenciado bajo la Licencia Apache 2.0.",
 	"about.site":    "Página del proyecto",
 
-	"err.invalid": "Ajustes no válidos: %s",
+	"err.invalid":        "Ajustes no válidos: %s",
+	"appear.pickColor":   "Elegir…",
+	"appear.blurNote":    "Windows 11 dibuja el desenfoque clásico en negro sólido, así que Desenfoque usa el fondo acrílico; su intensidad aclara u oscurece el cristal.",
+	"ui.closeUnsaved":    "Tienes cambios sin guardar. ¿Guardarlos antes de cerrar?",
+	"ui.scenario":        "Mostrar:",
+	"apps.pick":          "Selecciona una regla a la izquierda o añade una aplicación.",
+	"ui.hotkeyInvalid":   "Atajo no válido",
+	"ui.previewDisabled": "TaskGlass está apagado: barra de tareas normal de Windows",
 }

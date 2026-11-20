@@ -23,9 +23,9 @@ import (
 	"github.com/AnderCMD/TaskGlass/internal/config"
 	"github.com/AnderCMD/TaskGlass/internal/events"
 	"github.com/AnderCMD/TaskGlass/internal/i18n"
-	"github.com/AnderCMD/TaskGlass/internal/settings"
 	"github.com/AnderCMD/TaskGlass/internal/taskbar"
 	"github.com/AnderCMD/TaskGlass/internal/theme"
+	"github.com/AnderCMD/TaskGlass/internal/ui"
 	"github.com/AnderCMD/TaskGlass/internal/xaml"
 )
 
@@ -56,7 +56,7 @@ type App struct {
 	ev          *events.Watcher
 	kick        chan struct{} // asks the loop for an immediate update
 
-	srv      *settings.Server
+	settings *ui.UI
 	menu     menuItems
 	cancel   context.CancelFunc
 	done     chan struct{}
@@ -81,7 +81,7 @@ func New(o Options) *App {
 		a.modTime = st.ModTime()
 	}
 	a.systemLight.Store(theme.SystemIsLight())
-	a.srv = settings.New(host{a})
+	a.settings = ui.New(host{a})
 	if autostart.Repair(exe) {
 		o.Log.Info("autostart entry repaired")
 	}
@@ -152,22 +152,10 @@ func (a *App) apply(fn func(*config.Config)) error {
 // lang is the language the UI currently uses.
 func (a *App) lang() i18n.Lang { return i18n.Resolve(a.snapshot().Language, i18n.SystemLocale()) }
 
-// OpenSettings shows the settings window (starting its local server on first use).
+// OpenSettings shows the settings window, or brings the open one forward.
 func (a *App) OpenSettings() {
-	if a.srv == nil {
-		return
-	}
-	url, err := a.srv.URL()
-	if err != nil {
-		a.Log.Error("settings server", "err", err)
-		return
-	}
-	profile := filepath.Join(os.TempDir(), "TaskGlass-ui")
-	if dir, err := os.UserCacheDir(); err == nil {
-		profile = filepath.Join(dir, "TaskGlass", "ui-profile")
-	}
-	if err := settings.Show(url, profile); err != nil {
-		a.Log.Error("open settings window", "err", err)
+	if a.settings != nil {
+		a.settings.Show()
 	}
 }
 
@@ -397,9 +385,6 @@ func (a *App) onExit() { a.shutdown() }
 // process must not exit before the taskbar has been restored.
 func (a *App) shutdown() {
 	a.stopOnce.Do(func() {
-		if a.srv != nil {
-			a.srv.Close()
-		}
 		if a.cancel != nil {
 			a.cancel()
 			select {

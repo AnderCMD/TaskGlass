@@ -2,6 +2,14 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Blur rendered solid black on Windows 11.** The classic blur-behind accent is drawn black by Windows 11 (measured on build 26300), whatever the tint. On Windows 11 Blur now uses the acrylic backdrop, and its strength lightens or darkens the glass (that backdrop takes its brightness from the tint colour and ignores the alpha). Windows 10 keeps the classic blur.
+
+### Changed
+- **The settings window is now native Windows** (real Win32 controls with the TaskGlass icon) instead of a web page, so there is no Edge window or local server any more. The live preview is drawn in-app with real blur, and shows the maximized and per-app looks and the hidden-icons flyout. The maximized rule has its own tab.
+
 ## [1.2.1] - 2026-11-20
 
 ### Fixed
