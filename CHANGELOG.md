@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.4.0] - 2026-11-20
 
 ### Added
 - **Automatic updates.** New `updates` setting (`notify` by default, `auto`, `off`), a **Check for updates…** tray item and controls in the settings window. TaskGlass checks the latest GitHub release once a day (the only network connection it makes), downloads the installer only from GitHub hosts, verifies its SHA-256 against the release's `SHA256SUMS.txt` and discards it on a mismatch, then runs it silently; the installer closes TaskGlass, updates it and starts the new version. In `notify` mode it asks first, once per version. If security software stops the installer from starting, the verified file is kept and its path is copied to the clipboard. Development builds never update. Details in `docs/configuration.md#updates`.

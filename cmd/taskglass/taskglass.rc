@@ -7,8 +7,8 @@
 1 RT_MANIFEST "taskglass.manifest"
 
 1 VERSIONINFO
-FILEVERSION 1,3,1,0
-PRODUCTVERSION 1,3,1,0
+FILEVERSION 1,4,0,0
+PRODUCTVERSION 1,4,0,0
 FILEFLAGSMASK 0x3fL
 FILEOS 0x40004L
 FILETYPE 0x1L
@@ -19,12 +19,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "AnderCMD"
             VALUE "FileDescription", "TaskGlass - transparent taskbar for Windows"
-            VALUE "FileVersion", "1.3.1.0"
+            VALUE "FileVersion", "1.4.0.0"
             VALUE "InternalName", "taskglass"
             VALUE "LegalCopyright", "Copyright (c) 2026 AnderCMD. Apache 2.0 License."
             VALUE "OriginalFilename", "taskglass.exe"
             VALUE "ProductName", "TaskGlass"
-            VALUE "ProductVersion", "1.3.1"
+            VALUE "ProductVersion", "1.4.0"
         END
     END
     BLOCK "VarFileInfo"
