@@ -2,6 +2,14 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- **The settings window is the web-style one again** (the 1.2.x window, shown in an Edge app window; the native Win32 window from 1.3.0 is removed). It keeps the 1.3.0 improvements: Blur works on Windows 11, and the preview shows how Blur really looks there.
+
+### Added
+- The settings window now has the TaskGlass icon (title bar and taskbar) through a favicon served by the local settings page.
+
 ## [1.3.0] - 2026-11-20
 
 ### Fixed
