@@ -204,6 +204,8 @@ var en = map[string]string{
 	"ui.scenario":        "Show:",
 	"apps.pick":          "Select a rule on the left, or add an application.",
 	"ui.hotkeyInvalid":   "Invalid shortcut",
+	"ui.openFailed":      "TaskGlass could not open its settings window. Your antivirus or security software is probably blocking it from starting programs.\n\nThe settings address was copied to the clipboard: paste it into any browser (Ctrl+V in the address bar).\n\nTo fix it for good, add TaskGlass to the trusted programs of your security software.",
+	"ui.serverFailed":    "TaskGlass could not start its local settings page (a security product may be blocking network access to this computer). You can still edit the config file from the tray menu: Open config file.\n\nAdd TaskGlass to the trusted programs of your security software to fix it.",
 	"ui.previewDisabled": "TaskGlass is off: stock Windows taskbar",
 }
 
@@ -337,5 +339,7 @@ var es = map[string]string{
 	"ui.scenario":        "Mostrar:",
 	"apps.pick":          "Selecciona una regla a la izquierda o añade una aplicación.",
 	"ui.hotkeyInvalid":   "Atajo no válido",
+	"ui.openFailed":      "TaskGlass no pudo abrir su ventana de configuración. Es probable que tu antivirus o software de seguridad le impida iniciar programas.\n\nLa dirección de la configuración se copió al portapapeles: pégala en cualquier navegador (Ctrl+V en la barra de direcciones).\n\nPara solucionarlo de forma definitiva, añade TaskGlass a los programas de confianza de tu software de seguridad.",
+	"ui.serverFailed":    "TaskGlass no pudo iniciar su página local de configuración (puede que un producto de seguridad bloquee el acceso de red a este equipo). Aún puedes editar el archivo de configuración desde el menú de la bandeja: Abrir archivo de configuración.\n\nAñade TaskGlass a los programas de confianza de tu software de seguridad para solucionarlo.",
 	"ui.previewDisabled": "TaskGlass está apagado: barra de tareas normal de Windows",
 }

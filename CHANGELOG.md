@@ -2,6 +2,11 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **The settings window now always gives you a way in.** When security software stops TaskGlass from starting programs (`Access is denied` for Edge or `rundll32`) or from opening its local page, the window used to just not appear and the only trace was in the log. TaskGlass now tries Edge, then the default browser through the shell, then `rundll32`; logs every failed attempt; and if all fail it copies the settings address to the clipboard and shows a message explaining what is blocking it and how to fix it.
+
 ## [1.3.1] - 2026-11-20
 
 ### Changed

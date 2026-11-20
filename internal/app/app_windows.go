@@ -58,6 +58,7 @@ type App struct {
 	kick        chan struct{} // asks the loop for an immediate update
 
 	srv      *settings.Server
+	warning  atomic.Bool // a "cannot open settings" box is showing
 	menu     menuItems
 	cancel   context.CancelFunc
 	done     chan struct{}
@@ -153,6 +154,8 @@ func (a *App) apply(fn func(*config.Config)) error {
 // lang is the language the UI currently uses.
 func (a *App) lang() i18n.Lang { return i18n.Resolve(a.snapshot().Language, i18n.SystemLocale()) }
 
+func (a *App) tr(key string) string { return i18n.T(a.lang(), key) }
+
 // OpenSettings shows the settings window (starting its local server on first use).
 func (a *App) OpenSettings() {
 	if a.srv == nil {
@@ -161,6 +164,7 @@ func (a *App) OpenSettings() {
 	url, err := a.srv.URL()
 	if err != nil {
 		a.Log.Error("settings server", "err", err)
+		a.warnSettings("ui.serverFailed", "")
 		return
 	}
 	profile := filepath.Join(os.TempDir(), "TaskGlass-ui")
@@ -169,7 +173,25 @@ func (a *App) OpenSettings() {
 	}
 	if err := settings.Show(url, profile); err != nil {
 		a.Log.Error("open settings window", "err", err)
+		// Typically a security product blocking TaskGlass from starting programs.
+		// The address works in any browser, so hand it over.
+		a.warnSettings("ui.openFailed", url)
 	}
+}
+
+// warnSettings tells the user the settings window could not be opened. When
+// url is set it is copied to the clipboard first. Only one box is shown at a time.
+func (a *App) warnSettings(key, url string) {
+	if !a.warning.CompareAndSwap(false, true) {
+		return
+	}
+	if url != "" {
+		settings.CopyToClipboard(url)
+	}
+	go func() {
+		defer a.warning.Store(false)
+		settings.Notify("TaskGlass", a.tr(key))
+	}()
 }
 
 // host adapts App to settings.Host.

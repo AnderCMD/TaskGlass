@@ -1,16 +1,16 @@
 # Graph Report - TaskGlass  (2026-11-20)
 
 ## Corpus Check
-- 50 files · ~98,812 words
+- 50 files · ~99,549 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 622 nodes · 1081 edges · 53 communities (47 shown, 6 thin omitted)
-- Extraction: 92% EXTRACTED · 8% INFERRED · 0% AMBIGUOUS · INFERRED: 91 edges (avg confidence: 0.8)
+- 631 nodes · 1097 edges · 52 communities (46 shown, 6 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 95 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `cc5eb08c`
+- Built from commit: `aac694d2`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -39,7 +39,7 @@
 - poll_ms
 - refresh_ms
 - surfaces
-- opacity
+- properties
 - T
 - Architecture
 - render-assets.ps1
@@ -50,7 +50,7 @@
 - Contributing
 - Security Policy
 - default
-- fakeHost
+- SystemLocale
 - enabled
 - hotkey
 - enum
@@ -58,13 +58,12 @@
 - Server
 - exe
 - autostart_windows.go
-- xaml_fix
 - language
 - main.go
 
 ## God Nodes (most connected - your core abstractions)
-1. `T()` - 40 edges
-2. `App` - 38 edges
+1. `T()` - 41 edges
+2. `App` - 40 edges
 3. `Config` - 35 edges
 4. `Controller` - 21 edges
 5. `Default()` - 20 edges
@@ -83,13 +82,13 @@
   cmd/taskglass/main_windows.go → internal/config/config.go
 - `main()` --calls--> `Save()`  [INFERRED]
   cmd/taskglass/main_windows.go → internal/config/config.go
-- `main()` --calls--> `Parse()`  [INFERRED]
-  tools/genicon/main.go → internal/config/config.go
+- `watchForQuit()` --calls--> `Notify()`  [INFERRED]
+  cmd/taskglass/main_windows.go → internal/settings/window_windows.go
 
 ## Import Cycles
 - None detected.
 
-## Communities (53 total, 6 thin omitted)
+## Communities (52 total, 6 thin omitted)
 
 ### Community 0 - "main"
 Cohesion: 0.26
@@ -108,12 +107,12 @@ Cohesion: 0.50
 Nodes (4): default, description, type, hotkey_enabled
 
 ### Community 4 - "App"
-Cohesion: 0.06
-Nodes (27): App, host, Options, panicGuard, Config, Int32, check(), Bool (+19 more)
+Cohesion: 0.05
+Nodes (30): App, host, menuItems, Options, panicGuard, Config, Theme, Int32 (+22 more)
 
 ### Community 5 - "Controller"
 Cohesion: 0.06
-Nodes (29): Attr, Handler, GUID, Duration, TaskbarAnchor(), Duration, TrayProbe(), Handle (+21 more)
+Nodes (30): Attr, Handler, GUID, Duration, TaskbarAnchor(), Duration, TrayProbe(), Handle (+22 more)
 
 ### Community 6 - "tap.c"
 Cohesion: 0.07
@@ -128,24 +127,24 @@ Cohesion: 0.29
 Nodes (6): additionalProperties, description, $id, $schema, title, type
 
 ### Community 9 - "Changelog"
-Cohesion: 0.08
-Nodes (23): [1.0.0] - 2026-11-17, [1.0.1] - 2026-11-17, [1.1.0] - 2026-11-18, [1.1.1] - 2026-11-18, [1.2.0] - 2026-11-20, [1.2.1] - 2026-11-20, [1.3.0] - 2026-11-20, Added (+15 more)
+Cohesion: 0.07
+Nodes (28): [1.0.0] - 2026-11-17, [1.0.1] - 2026-11-17, [1.1.0] - 2026-11-18, [1.1.1] - 2026-11-18, [1.2.0] - 2026-11-20, [1.2.1] - 2026-11-20, [1.3.0] - 2026-11-20, [1.3.1] - 2026-11-20 (+20 more)
 
 ### Community 10 - "tray_icon"
 Cohesion: 0.24
 Nodes (10): tray_icon, enum, default, description, enum, type, auto, color (+2 more)
 
 ### Community 12 - "definitions"
-Cohesion: 0.22
-Nodes (9): description, pattern, type, definitions, color, surface, additionalProperties, properties (+1 more)
+Cohesion: 0.20
+Nodes (10): description, pattern, type, definitions, color, opacity, description, maximum (+2 more)
 
 ### Community 13 - "config.go"
-Cohesion: 0.12
-Nodes (14): menuItems, Accent, Appearance, AppRule, Percent, Rule, Surface, Surfaces (+6 more)
+Cohesion: 0.16
+Nodes (11): Accent, Appearance, AppRule, Percent, Rule, Surface, Surfaces, Taskbars (+3 more)
 
 ### Community 18 - "properties"
-Cohesion: 0.22
-Nodes (9): description, $ref, properties, maximized, $schema, version, type, const (+1 more)
+Cohesion: 0.15
+Nodes (13): description, $ref, properties, maximized, $schema, version, xaml_fix, type (+5 more)
 
 ### Community 19 - "Watcher"
 Cohesion: 0.33
@@ -175,9 +174,9 @@ Nodes (6): refresh_ms, default, description, maximum, minimum, type
 Cohesion: 0.25
 Nodes (8): surfaces, tray_overflow, additionalProperties, description, properties, type, description, $ref
 
-### Community 28 - "opacity"
-Cohesion: 0.40
-Nodes (5): opacity, description, maximum, minimum, type
+### Community 28 - "properties"
+Cohesion: 0.50
+Nodes (4): rule, additionalProperties, properties, type
 
 ### Community 29 - "T"
 Cohesion: 0.08
@@ -213,7 +212,7 @@ Nodes (4): additionalProperties, description, type, default
 
 ### Community 42 - "enabled"
 Cohesion: 0.25
-Nodes (8): rule, default, description, type, enabled, additionalProperties, properties, type
+Nodes (8): surface, default, description, type, enabled, additionalProperties, properties, type
 
 ### Community 43 - "hotkey"
 Cohesion: 0.50
@@ -239,10 +238,6 @@ Nodes (5): description, minLength, pattern, type, exe
 Cohesion: 0.38
 Nodes (8): clearDisabled(), command(), Enabled(), Repair(), sameCommand(), Set(), TestCommandIsPlainQuotedPath(), TestSameCommandRecognisesLegacyDoubledBackslashes()
 
-### Community 49 - "xaml_fix"
-Cohesion: 0.50
-Nodes (4): xaml_fix, default, description, type
-
 ### Community 50 - "language"
 Cohesion: 0.29
 Nodes (7): default, description, enum, type, language, en, es
@@ -252,24 +247,24 @@ Cohesion: 0.83
 Nodes (3): entry, main(), writeICO()
 
 ## Knowledge Gaps
-- **165 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+160 more)
+- **168 isolated node(s):** `$schema`, `$id`, `title`, `description`, `type` (+163 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `App` connect `App` to `main`, `winapi_windows.go`, `Controller`, `config.go`, `Server`, `Watcher`?**
-  _High betweenness centrality (0.094) - this node is a cross-community bridge._
-- **Why does `Config` connect `App` to `winapi_windows.go`, `fakeHost`, `config.go`, `Server`, `T`?**
-  _High betweenness centrality (0.073) - this node is a cross-community bridge._
-- **Why does `properties` connect `properties` to `hotkey_enabled`, `items`, `config.schema.json`, `default`, `enabled`, `hotkey`, `tray_icon`, `theme`, `xaml_fix`, `language`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `surfaces`?**
-  _High betweenness centrality (0.048) - this node is a cross-community bridge._
+- **Why does `App` connect `App` to `main`, `winapi_windows.go`, `Controller`, `Server`, `Watcher`?**
+  _High betweenness centrality (0.097) - this node is a cross-community bridge._
+- **Why does `Config` connect `App` to `T`, `winapi_windows.go`, `config.go`, `Server`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+- **Why does `properties` connect `properties` to `hotkey_enabled`, `items`, `config.schema.json`, `default`, `enabled`, `hotkey`, `tray_icon`, `theme`, `language`, `enum`, `taskbars`, `debounce_ms`, `poll_ms`, `refresh_ms`, `surfaces`?**
+  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+- **Are the 2 inferred relationships involving `T()` (e.g. with `.syncMenu()` and `.tr()`) actually correct?**
+  _`T()` has 2 INFERRED edges - model-reasoned connections that need verification._
 - **Are the 16 inferred relationships involving `Default()` (e.g. with `main()` and `TestDefaultIsValid()`) actually correct?**
   _`Default()` has 16 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `$schema`, `$id`, `title` to the rest of the system?**
-  _165 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _168 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `winapi_windows.go` be split into smaller, more focused modules?**
   _Cohesion score 0.10810810810810811 - nodes in this community are weakly interconnected._
-- **Should `App` be split into smaller, more focused modules?**
-  _Cohesion score 0.06448412698412699 - nodes in this community are weakly interconnected._
