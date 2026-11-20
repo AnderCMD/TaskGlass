@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.2.1] - 2026-11-20
 
 ### Fixed
 - **Settings window showed "Cannot read properties of null".** With no per-app rules, 1.2.0 saved `"apps": null` to `config.json`, which the window could not read. `null` now loads as an empty list, is never written again, and the window tolerates it.
