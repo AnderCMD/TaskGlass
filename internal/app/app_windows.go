@@ -132,7 +132,7 @@ func (a *App) update(fn func(*config.Config)) {
 func (a *App) apply(fn func(*config.Config)) error {
 	a.mu.Lock()
 	next := a.cfg
-	next.Apps = append([]config.AppRule(nil), a.cfg.Apps...)
+	next.Apps = append([]config.AppRule{}, a.cfg.Apps...)
 	fn(&next)
 	if err := config.Save(a.CfgPath, next); err != nil {
 		a.mu.Unlock()
@@ -177,7 +177,7 @@ type host struct{ a *App }
 func (h host) Config() config.Config { return h.a.snapshot() }
 func (h host) Apply(c config.Config) error {
 	next := c
-	next.Apps = append([]config.AppRule(nil), c.Apps...)
+	next.Apps = append([]config.AppRule{}, c.Apps...)
 	return h.a.apply(func(cur *config.Config) { *cur = next })
 }
 func (h host) AutostartEnabled() bool { return autostart.Enabled(h.a.exe) }

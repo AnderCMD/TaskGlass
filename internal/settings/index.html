@@ -247,6 +247,7 @@ async function api(path, body) {
   if (!r.ok) throw new Error(j.error || r.statusText);
   return j;
 }
+const norm = c => { c.apps = c.apps || []; return c; }; // older versions wrote "apps": null
 const getPath = (o, p) => p.split(".").reduce((x, k) => x?.[k], o);
 function setPath(o, p, v) { const ks = p.split("."); const last = ks.pop(); ks.reduce((x, k) => x[k], o)[last] = v; }
 
@@ -449,7 +450,7 @@ function bindStatic() {
   $("#revert").onclick = () => { cfg = JSON.parse(savedCfg); auto = savedAuto; applyI18n(); onChange(); };
   $("#reset").onclick = async () => {
     if (!confirm(t("ui.resetConfirm"))) return;
-    cfg = await api("/api/defaults", {}); applyI18n(); onChange();
+    cfg = norm(await api("/api/defaults", {})); applyI18n(); onChange();
   };
   $("#save").onclick = save;
   addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); if (!$("#save").disabled) save(); } });
@@ -465,13 +466,13 @@ async function save() {
     cfg.apps = cfg.apps.filter(r => r.exe && r.exe.trim());
     const res = await api("/api/config", cfg);
     if (auto !== savedAuto) { const r = await api("/api/autostart", { on: auto }); auto = r.autostart; }
-    cfg = res.config; savedCfg = JSON.stringify(cfg); savedAuto = auto;
+    cfg = norm(res.config); savedCfg = JSON.stringify(cfg); savedAuto = auto;
     applyI18n(); onChange(); toast(t("ui.saved"));
   } catch (e) { toast(t("ui.saveFailed", e.message), true); }
 }
 async function init() {
   meta = await api("/api/state");
-  cfg = meta.config; savedCfg = JSON.stringify(cfg); auto = savedAuto = meta.autostart;
+  cfg = norm(meta.config); savedCfg = JSON.stringify(cfg); auto = savedAuto = meta.autostart;
   $("#ver").textContent = meta.version; $("#cfgPath").textContent = meta.configPath;
   bindStatic(); applyI18n(); showTab(TABS.includes(tab) ? tab : "general"); onChange();
   history.replaceState(null, "", location.pathname);
