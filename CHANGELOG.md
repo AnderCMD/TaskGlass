@@ -2,6 +2,20 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Start with Windows did not start TaskGlass.** The Run-key value was written with Go's `%q`, which doubled every backslash (`"C:\Dir\taskglass.exe"`), and Windows could not launch it at sign-in. The path is now written in plain quotes. An entry written by an older version is repaired automatically the next time TaskGlass runs; turning "Start with Windows" on also clears a "disabled in Task Manager" mark.
+
+### Added
+- **Settings window** with a live preview of the taskbar (default, maximized and per-app looks) and of the hidden-icons flyout. Edit everything there: style, tint colour and strength, theme, language, tray icon, hotkey, per-app rules, flyout opacity, start with Windows and advanced timings. Open it with a left click on the tray icon, "Settings…" in the menu, `taskglass --settings` or by launching TaskGlass again. It is a local page (loopback only, protected by a per-run token) shown in an Edge app window.
+- **English and Spanish** everywhere: tray menu, settings window, installer and license. New `language` setting (`auto`, `en`, `es`).
+- **Installer**: asks for the taskbar style, language and extras on a first install and writes the initial `config.json`; shows the license in the installer language (`LICENSE.es.txt`, an unofficial translation, alongside the binding English `LICENSE`); adds a "TaskGlass Settings" Start-menu entry.
+- Quick presets (pure glass, frosted, acrylic tint, solid).
+
+### Changed
+- Blur no longer renders opaque black when its tint is 0 (same floor Clear and Acrylic already had).
+
 ## [1.1.1] - 2026-11-18
 
 ### Changed

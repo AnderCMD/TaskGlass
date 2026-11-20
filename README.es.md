@@ -39,6 +39,8 @@ powershell -File scripts/build-tap.ps1   # genera dist/taskglass_tap.dll
 
 ## Uso
 
+Clic izquierdo en el icono de bandeja (o `taskglass --settings`) abre la **ventana de configuración**: todas las opciones, en español o inglés, con vista previa en vivo de tu barra de tareas y del desplegable de iconos ocultos.
+
 Clic derecho en el icono de bandeja para activar o desactivar TaskGlass, elegir estilo o tema, alternar las reglas, iniciar con Windows, o abrir la configuración y el log.
 
 Una configuración mínima: barra transparente, opaca si algo está maximizado, y desenfoque teñido en tu editor:

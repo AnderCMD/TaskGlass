@@ -28,6 +28,9 @@ var version = "dev"
 const (
 	mutexName = `Local\TaskGlass.Singleton`
 	quitName  = `Local\TaskGlass.Quit`
+	// settingsName is signalled to make the running instance show its settings
+	// window (a second launch, or --settings).
+	settingsName = `Local\TaskGlass.Settings`
 )
 
 func main() {
@@ -38,6 +41,7 @@ func main() {
 		validate    = flag.Bool("validate", false, "check the config file and exit (non-zero on errors)")
 		quit        = flag.Bool("quit", false, "ask a running TaskGlass to exit")
 		verbose     = flag.Bool("verbose", false, "log to stderr as well as the log file")
+		openUI      = flag.Bool("settings", false, "open the settings window (starts TaskGlass if it is not running)")
 		restore     = flag.Bool("restore", false, "put the taskbar back to the stock look and exit (use after a crash)")
 	)
 	flag.Usage = func() {
@@ -94,6 +98,7 @@ func main() {
 	// Single instance.
 	if _, err := windows.CreateMutex(nil, false, windows.StringToUTF16Ptr(mutexName)); err != nil {
 		if err == windows.ERROR_ALREADY_EXISTS {
+			signalEvent(settingsName) // already running: just bring up its settings
 			return
 		}
 		fatal("mutex: %v", err)
@@ -110,8 +115,9 @@ func main() {
 		log.Error("config invalid, using defaults until it is fixed", "path", cfgPath, "err", cfgErr)
 	}
 
-	a := app.New(app.Options{Log: log, CfgPath: cfgPath, LogPath: logPath, Version: version, Config: cfg})
+	a := app.New(app.Options{Log: log, CfgPath: cfgPath, LogPath: logPath, Version: version, Config: cfg, ShowSettings: *openUI})
 	watchForQuit(a)
+	watchForSettings(a)
 	a.Run()
 }
 
@@ -138,6 +144,30 @@ func watchForQuit(a *app.App) {
 			}
 		}
 	}()
+}
+
+// watchForSettings shows the settings window whenever another launch asks.
+func watchForSettings(a *app.App) {
+	ev, err := windows.CreateEvent(nil, 0, 0, windows.StringToUTF16Ptr(settingsName)) // auto-reset
+	if err != nil {
+		return
+	}
+	go func() {
+		for {
+			if r, _ := windows.WaitForSingleObject(ev, windows.INFINITE); r == windows.WAIT_OBJECT_0 {
+				a.OpenSettings()
+			}
+		}
+	}()
+}
+
+func signalEvent(name string) {
+	ev, err := windows.OpenEvent(windows.EVENT_MODIFY_STATE, false, windows.StringToUTF16Ptr(name))
+	if err != nil {
+		return
+	}
+	defer windows.CloseHandle(ev)
+	_ = windows.SetEvent(ev)
 }
 
 func signalQuit() error {

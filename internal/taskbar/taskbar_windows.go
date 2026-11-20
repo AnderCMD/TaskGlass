@@ -137,6 +137,9 @@ func toPolicy(ap config.Appearance, light bool) policy {
 		}
 	case config.AccentBlur:
 		st = winapi.AccentEnableBlurBehind
+		if alpha == 0 {
+			alpha = 1 // same quirk as clear: a fully zero tint can render opaque black
+		}
 	case config.AccentAcrylic:
 		st = winapi.AccentEnableAcrylicBlurBG
 		if alpha == 0 {
