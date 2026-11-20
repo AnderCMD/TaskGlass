@@ -2,7 +2,7 @@
 
 Format based on [Keep a Changelog](https://keepachangelog.com/); versioning follows [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [1.2.0] - 2026-11-20
 
 ### Fixed
 - **Start with Windows did not start TaskGlass.** The Run-key value was written with Go's `%q`, which doubled every backslash (`"C:\Dir\taskglass.exe"`), and Windows could not launch it at sign-in. The path is now written in plain quotes. An entry written by an older version is repaired automatically the next time TaskGlass runs; turning "Start with Windows" on also clears a "disabled in Task Manager" mark.
